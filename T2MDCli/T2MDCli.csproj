@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Nullable>Enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+    <RootNamespace>GoldenSyrupGames.T2MD</RootNamespace>
+    <AssemblyName>t2md</AssemblyName>
+    <Authors>Ben Renninson</Authors>
+    <Company>Golden Syrup Games</Company>
+    <Version>1.0.0</Version>
+    <Copyright>2021 Golden Syrup Games</Copyright>
+    <PackageLicenseExpression></PackageLicenseExpression>
+
+    <!--
+      enable to ensure there's no extra .dlls in the folder.
+      Disabled as this would make application whitelist harder because it uses the temp directory to extract a few .dlls to.
+      Should be fine in .Net 6 as we're not using any native assets. https://github.com/dotnet/runtime/issues/36590.
+      Enabled again because most users won't be using application whitelisting.
+    -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.8.0" />
+    <PackageReference Include="IDisposableAnalyzers" Version="3.4.15">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Spectre.Console" Version="0.41.0" />
+  </ItemGroup>
+
+</Project>

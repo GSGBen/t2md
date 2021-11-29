@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "T2MDCli": {
+      "commandName": "Project",
+      "commandLineArgs": "--output-folder .\\t2md-test",
+      "workingDirectory": "%userprofile%"
+    }
+  }
+}
