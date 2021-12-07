@@ -7,6 +7,7 @@ using System.IO;
 using System.Net.Http;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
 namespace GoldenSyrupGames.T2MD
 {
@@ -110,6 +111,9 @@ namespace GoldenSyrupGames.T2MD
             var trelloApiBoards = new List<TrelloApiBoardModel>();
             // match camelCase json to PascalCase C# class
             _jsonDeserializeOptions.PropertyNameCaseInsensitive = true;
+            // some users have boards (in the per-board processing later, but set all together here)
+            // with pos values as strings, e.g. "123.45". Support those
+            _jsonDeserializeOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
             trelloApiBoards = JsonSerializer.Deserialize<List<TrelloApiBoardModel>>(textResponse, _jsonDeserializeOptions);
             if (trelloApiBoards == null)
             {
