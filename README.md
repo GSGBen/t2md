@@ -33,12 +33,12 @@ Example layout:
 
 ## Usage
 
-- Run `t2md.exe --output-path <backup destination folder>` once to generate `t2md.json` in the current directory
+- Run `t2md.exe --output-folder <backup destination folder>` once to generate `t2md.json` in the current directory
 - Browse to https://trello.com/app-key and copy your `Key`
 - Replace `<key>` with it at the end of the following URL, browse to it and continue to retrieve your token
   - `https://trello.com/1/authorize?name=Trello%20To%20Markdown&expiration=never&scope=read&response_type=token&key=<key>`
 - Put them both in `t2md.json`
-- Run `t2md.exe --output-path <backup destination folder>` again.
+- Run `t2md.exe --output-folder <backup destination folder>` again.
   A t2md subfolder will be created under this and all Trello boards will be backed up to it.
   - **WARNING:** The entire t2md subfolder will be deleted and recreated each time.
 
