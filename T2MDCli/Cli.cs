@@ -182,8 +182,10 @@ namespace GoldenSyrupGames.T2MD
             using Stream contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             await contentStream.CopyToAsync(fileStream).ConfigureAwait(false);
 
-            // create a folder for each board
-            string boardPath = Path.Combine(_outputPath, trelloApiBoard.Name);
+            // create a folder for each board.
+            // without this linux will happily write /'s
+            string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
+            string boardPath = Path.Combine(_outputPath, usableBoardName);
             Directory.CreateDirectory(boardPath);
             // do the same for a subfolder for archived lists
             string archivedListPath = Path.Combine(boardPath, "archived");
@@ -290,8 +292,7 @@ namespace GoldenSyrupGames.T2MD
             
             // create a folder for each list.
             // remove special characters
-            char[] unusableCharacters = Path.GetInvalidFileNameChars();
-            var usableListName = String.Join("_", trelloList.Name.Split(unusableCharacters, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
+            string usableListName = FileSystem.SanitiseForPath(trelloList.Name);
             var listFolderName = $"{listIndex} {usableListName}";
             string listPath = Path.Combine(outerPath, listFolderName);
             Directory.CreateDirectory(listPath);
@@ -338,8 +339,7 @@ namespace GoldenSyrupGames.T2MD
             int actualOrRestrictedLength = Math.Min(trelloCard.Name.Length, options.MaxCardFilenameTitleLength);
             string usableCardName = trelloCard.Name.Substring(0, actualOrRestrictedLength);
             // remove special characters
-            char[] unusableCharacters = Path.GetInvalidFileNameChars();
-            usableCardName = String.Join("_", usableCardName.Split(unusableCharacters, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
+            usableCardName = FileSystem.SanitiseForPath(usableCardName);
 
             // write the description to a markdown file
             Task<(string, string)> WriteCardDescriptionTask = WriteCardDescriptionAsync(trelloCard, cardFolderPath, cardIndex, usableCardName, options);

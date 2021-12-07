@@ -132,5 +132,17 @@ namespace GoldenSyrupGames.T2MD
                 throw lastException;
             }
         }
+
+        /// <summary>
+        /// Returns FolderOrFileName with any unsafe path characters replaced with _.
+        /// </summary>
+        /// <param name="FolderOrFileName">The folder or file name with potentially unsafe characters</param>
+        /// <returns></returns>
+        public static string SanitiseForPath(string FolderOrFileName)
+        {
+            // remove special characters
+            char[] unusableCharacters = Path.GetInvalidFileNameChars();
+            return String.Join("_", FolderOrFileName.Split(unusableCharacters, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
+        }
     }
 }
