@@ -157,9 +157,9 @@ namespace GoldenSyrupGames.T2MD
         private static async Task ProcessTrelloBoardAsync(TrelloApiBoardModel trelloApiBoard, CliOptions options)
         {
             // quick testing
-            //if (trelloApiBoard.Name != "TestBoard")
+            //if (trelloApiBoard.Name != "Test\\Board")
             //{
-            //    continue;
+            //    return;
             //}
 
             AnsiConsole.MarkupLine($"    [blue]Starting {trelloApiBoard.Name}[/]");
@@ -177,14 +177,14 @@ namespace GoldenSyrupGames.T2MD
             response.EnsureSuccessStatusCode();
 
             // write the json to file (overwrite)
-            string boardOutputFilePath = Path.Combine(_outputPath, $"{trelloApiBoard.Name}.json");
+            string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
+            string boardOutputFilePath = Path.Combine(_outputPath, $"{usableBoardName}.json");
             using FileStream fileStream = File.Create(boardOutputFilePath);
             using Stream contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             await contentStream.CopyToAsync(fileStream).ConfigureAwait(false);
 
             // create a folder for each board.
             // without this linux will happily write /'s
-            string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
             string boardPath = Path.Combine(_outputPath, usableBoardName);
             Directory.CreateDirectory(boardPath);
             // do the same for a subfolder for archived lists
