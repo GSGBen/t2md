@@ -25,7 +25,19 @@ namespace GoldenSyrupGames.T2MD
         private static string _outputPath = "";
 
         // shared options for json work
-        private static JsonSerializerOptions _jsonDeserializeOptions = new JsonSerializerOptions();
+        private static JsonSerializerOptions _jsonDeserializeOptions = new JsonSerializerOptions
+        {
+            // match camelCase json to PascalCase C# class
+            PropertyNameCaseInsensitive = true,
+            // some users have boards (in the per-board processing later, but set all together here)
+            // with pos values as strings, e.g. "123.45". Support those
+            NumberHandling = JsonNumberHandling.AllowReadingFromString,
+            // Trello also (used to?) encode some positions as "bottom". Handle that
+            Converters =
+            {
+                new TrelloDoubleJsonConverter()
+            }
+        };
 
         static async Task Main(string[] args)
         {
@@ -109,11 +121,6 @@ namespace GoldenSyrupGames.T2MD
             var url = $"https://api.trello.com/1/members/me/boards?key={_apiKey}&token={_apiToken}";
             string textResponse = await _httpClient.GetStringAsync(url).ConfigureAwait(false);
             var trelloApiBoards = new List<TrelloApiBoardModel>();
-            // match camelCase json to PascalCase C# class
-            _jsonDeserializeOptions.PropertyNameCaseInsensitive = true;
-            // some users have boards (in the per-board processing later, but set all together here)
-            // with pos values as strings, e.g. "123.45". Support those
-            _jsonDeserializeOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
             trelloApiBoards = JsonSerializer.Deserialize<List<TrelloApiBoardModel>>(textResponse, _jsonDeserializeOptions);
             if (trelloApiBoards == null)
             {

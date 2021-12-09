@@ -9,7 +9,7 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// Partial model of the API response to /board (maybe?) to deserialize json to. We only use this as listed in the response to /members/me/boards.
     /// </summary>
-    class TrelloApiBoardModel
+    public class TrelloApiBoardModel
     {
         public string Name { get; set; } = "";
         public string ShortLink { get; set; } = "";
@@ -31,7 +31,7 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// Partial model of the json from backing up a Trello board (via the web UI, not via the API. E.g. trello.com/b/<id>.json
     /// </summary>
-    class TrelloBoardModel
+    public class TrelloBoardModel
     {
         public string Name { get; set; } = "";
         public string ShortLink { get; set; } = "";
@@ -57,7 +57,7 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// Partial model of lists forming part of TrelloBoardModel, + some extra properties we store results in.
     /// </summary>
-    class TrelloListModel
+    public class TrelloListModel
     {
         public string Name { get; set; } = "";
         public string ID { get; set; } = "";
@@ -103,7 +103,7 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// Partial model of cards forming part of TrelloBoardModel
     /// </summary>
-    class TrelloCardModel
+    public class TrelloCardModel
     {
         public string Name { get; set; } = "";
         public string ID { get; set; } = "";
@@ -147,7 +147,7 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// Partial model of checklists forming part of TrelloBoardModel
     /// </summary>
-    class TrelloChecklistModel
+    public class TrelloChecklistModel
     {
         public string Name { get; set; } = "";
         public string ID { get; set; } = "";
@@ -182,7 +182,7 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// Partial model of checklists forming part of TrelloBoardModel
     /// </summary>
-    class TrelloCheckItemModel
+    public class TrelloCheckItemModel
     {
         public string Name { get; set; } = "";
         public string ID { get; set; } = "";
@@ -217,7 +217,7 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// Partial model of card actions (like commenting) forming part of TrelloBoardModel
     /// </summary>
-    class TrelloActionModel
+    public class TrelloActionModel
     {
         public string ID { get; set; } = "";
         /// <summary>
@@ -249,7 +249,7 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// Partial model of card actions inner data forming part of TrelloBoardModel
     /// </summary>
-    class TrelloActionDataModel
+    public class TrelloActionDataModel
     {
         /// <summary>
         /// E.g. the contents of the comment
@@ -264,7 +264,7 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// partial model of a card's attachment forming part of TrelloBoardModel, + some extra properties we store results in.
     /// </summary>
-    class TrelloAttachmentModel
+    public class TrelloAttachmentModel
     {
         public bool IsUpload { get; set; } = false;
         public string Name { get; set; } = "";
