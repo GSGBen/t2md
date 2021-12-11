@@ -43,6 +43,14 @@ namespace GoldenSyrupGames.T2MD
         )]
         public int MaxCardFilenameTitleLength { get; set; } = 0;
 
+        // https://github.com/GSGBen/t2md/issues/4. Trello can have attachment errors
+        [Option(
+            "ignore-failed-attachment-downloads",
+            Default = false,
+            HelpText = "If specified, exceptions when downloading attachments will print a warning instead of stopping the program."
+        )]
+        public bool IgnoreFailedAttachmentDownloads { get; set; } = false;
+
         public static Task PrintUsage(IEnumerable<Error> errors)
         {
             Console.WriteLine(@"

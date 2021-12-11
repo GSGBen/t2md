@@ -11,7 +11,7 @@ using System.Text.Json.Serialization;
 
 namespace GoldenSyrupGames.T2MD
 {
-    class Cli
+    public class Cli
     {
         // create the HttpClient we'll use for all our requests.
         // see https://www.aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
@@ -358,7 +358,9 @@ namespace GoldenSyrupGames.T2MD
             IEnumerable<TrelloAttachmentModel> uploadedAttachments = trelloCard.Attachments.Where(attachment => attachment.IsUpload);
             if (uploadedAttachments.Count() > 0)
             {
-                await DownloadTrelloCardAttachmentsAsync(uploadedAttachments, trelloCard, cardIndex, usableCardName, cardFolderPath);
+                await DownloadTrelloCardAttachmentsAsync(
+                    uploadedAttachments, trelloCard, cardIndex, usableCardName,
+                    cardFolderPath, options.IgnoreFailedAttachmentDownloads, trelloBoard.Name);
             }
 
             // save the path and contents of the description and comment files so we can find/replace URLs in them
@@ -504,13 +506,17 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="cardIndex">The order of this card in the list, depending on whether it's archived or not.</param>
         /// <param name="usableCardName">The length-limited and usable version of the card title - special characters should be removed already.</param>
         /// <param name="cardFolderPath">The archived or non-archived folder items in this card write to.</param>
+        /// <param name="IgnoreFailedAttachmentDownloads">If specified, print a warning when an exception is encountered instead of propagating.</param>
+        /// <param name="boardName">The name of the board this attachment is in a card under, for logging.</param>
         /// <returns></returns>
         private static async Task DownloadTrelloCardAttachmentsAsync(
             IEnumerable<TrelloAttachmentModel> uploadedAttachments,
             TrelloCardModel trelloCard,
             int cardIndex,
             string usableCardName,
-            string cardFolderPath
+            string cardFolderPath,
+            bool IgnoreFailedAttachmentDownloads,
+            string boardName
         )
         {
             if (uploadedAttachments.Count() > 0)
@@ -530,7 +536,9 @@ namespace GoldenSyrupGames.T2MD
                 var AttachmentDownloadTasks = new List<Task<string>>();
                 foreach (TrelloAttachmentModel attachment in uploadedAttachments)
                 {
-                    AttachmentDownloadTasks.Add(DownloadTrelloCardAttachmentAsync(attachment, attachmentFolderPath, cardFolderPath));
+                    AttachmentDownloadTasks.Add(
+                        DownloadTrelloCardAttachmentAsync(
+                            attachment, attachmentFolderPath, cardFolderPath, IgnoreFailedAttachmentDownloads, boardName, usableCardName));
                 }
                 string[] AttachmentTableLines = await Task.WhenAll(AttachmentDownloadTasks);
 
@@ -550,33 +558,60 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="attachment">The models of the attachment parsed from the json backup.</param>
         /// <param name="attachmentFolderPath">The folder we save attachments into for this card.</param>
         /// <param name="cardFolderPath">The archived or non-archived folder items in this card write to.</param>
-        /// <returns></returns>
-        private static async Task<string> DownloadTrelloCardAttachmentAsync(
+        /// <param name="IgnoreFailedAttachmentDownloads">If specified, print a warning when an exception is encountered instead of propagating.</param>
+        /// <param name="boardName">The name of the board this attachment is in a card under, for logging.</param>
+        /// <param name="cardName">The name of the card this attachment is attached to, for logging.</returns>
+        public static async Task<string> DownloadTrelloCardAttachmentAsync(
             TrelloAttachmentModel attachment,
             string attachmentFolderPath,
-            string cardFolderPath
+            string cardFolderPath,
+            bool ignoreFailedAttachmentDownloads,
+            string boardName,
+            string cardName
         )
         {
-            // download the attachment
-            using var attachmentRequest = new HttpRequestMessage(HttpMethod.Get, attachment.Url);
-            attachmentRequest.Headers.Add("Authorization", $"OAuth oauth_consumer_key=\"{_apiKey}\", oauth_token=\"{_apiToken}\"");
-            using HttpResponseMessage attachmentResponse = await _httpClient.SendAsync(attachmentRequest).ConfigureAwait(false);
-            attachmentResponse.EnsureSuccessStatusCode();
+            try
+            {
+                // download the attachment
+                using var attachmentRequest = new HttpRequestMessage(HttpMethod.Get, attachment.Url);
+                attachmentRequest.Headers.Add("Authorization", $"OAuth oauth_consumer_key=\"{_apiKey}\", oauth_token=\"{_apiToken}\"");
+                using HttpResponseMessage attachmentResponse = await _httpClient.SendAsync(attachmentRequest).ConfigureAwait(false);
+                attachmentResponse.EnsureSuccessStatusCode();
 
-            string attachmentFileExtension = Path.GetExtension(attachment.FileName);
-            // use the ID to create a unique filename
-            string attachmentPath = Path.Combine(attachmentFolderPath, $"{attachment.ID}{attachmentFileExtension}");
-            // write the attachment to disk
-            using FileStream attachmentFileStream = File.Create(attachmentPath);
-            using Stream attachmentContentStream = await attachmentResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            await attachmentContentStream.CopyToAsync(attachmentFileStream).ConfigureAwait(false);
+                string attachmentFileExtension = Path.GetExtension(attachment.FileName);
+                // use the ID to create a unique filename
+                string attachmentPath = Path.Combine(attachmentFolderPath, $"{attachment.ID}{attachmentFileExtension}");
+                // write the attachment to disk
+                using FileStream attachmentFileStream = File.Create(attachmentPath);
+                using Stream attachmentContentStream = await attachmentResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                await attachmentContentStream.CopyToAsync(attachmentFileStream).ConfigureAwait(false);
 
-            // calculate the new URL, from where the markdown files will be to the attachment file.
-            // Markdown supports local relative paths
-            string relativeAttachmentPath = Path.GetRelativePath(cardFolderPath, attachmentPath);
-            // prepare the line to add to the file
-            string relativeAttachmentPathSpacesReplaced = relativeAttachmentPath.Replace(" ", "%20");
-            return $"{attachment.ID} | {attachment.FileName} | [.\\{relativeAttachmentPath}]({relativeAttachmentPathSpacesReplaced})\n";
+                // calculate the new URL, from where the markdown files will be to the attachment file.
+                // Markdown supports local relative paths
+                string relativeAttachmentPath = Path.GetRelativePath(cardFolderPath, attachmentPath);
+                // prepare the line to add to the file
+                string relativeAttachmentPathSpacesReplaced = relativeAttachmentPath.Replace(" ", "%20");
+                return $"{attachment.ID} | {attachment.FileName} | [.\\{relativeAttachmentPath}]({relativeAttachmentPathSpacesReplaced})\n";
+            }
+            catch (Exception exception)
+            {
+                if (ignoreFailedAttachmentDownloads)
+                {
+                    // print a warning instead
+                    AnsiConsole.MarkupLine($"[yellow]Failed to download attachment {attachment.FileName} from {attachment.Url}" +
+                        $"    Board: \"{boardName}\"" +
+                        $"    Card: {cardName}" +
+                        // using in interpolation automatically calls exception.ToString()
+                        $"    Exception: {exception}[/]");
+
+                    return $"{attachment.ID} | {attachment.FileName} | **failed to download**\n";
+                }
+                else
+                {
+                    // this is the proper way to rethrow the exception - you don't need to specify the caught one
+                    throw;
+                }
+            }
         }
 
         /// <summary>
