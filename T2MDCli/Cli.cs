@@ -591,7 +591,7 @@ namespace GoldenSyrupGames.T2MD
                 string relativeAttachmentPath = Path.GetRelativePath(cardFolderPath, attachmentPath);
                 // prepare the line to add to the file
                 string relativeAttachmentPathSpacesReplaced = relativeAttachmentPath.Replace(" ", "%20");
-                return $"{attachment.ID} | {attachment.FileName} | [.\\{relativeAttachmentPath}]({relativeAttachmentPathSpacesReplaced})\n";
+                return $"{attachment.ID} | {attachment.FileName} | [.\\{relativeAttachmentPath}]({relativeAttachmentPathSpacesReplaced})";
             }
             catch (Exception exception)
             {
@@ -604,7 +604,7 @@ namespace GoldenSyrupGames.T2MD
                         // using in interpolation automatically calls exception.ToString()
                         $"    Exception: {exception}[/]");
 
-                    return $"{attachment.ID} | {attachment.FileName} | **failed to download**\n";
+                    return $"{attachment.ID} | {attachment.FileName} | **failed to download**";
                 }
                 else
                 {
