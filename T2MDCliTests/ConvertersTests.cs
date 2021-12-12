@@ -65,6 +65,57 @@ namespace GoldenSyrupGames.T2MD.Tests
 
             Assert.IsInstanceOfType(trelloCard.Pos, typeof(double));
         }
+    }
 
+    [TestClass]
+    public class TrelloStringJsonConverterTests
+    {
+        private JsonSerializerOptions _jsonDeserializeOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            NumberHandling = JsonNumberHandling.AllowReadingFromString,
+            Converters =
+            {
+                new TrelloStringJsonConverter()
+            }
+        };
+
+        // runs before each test
+        [TestInitialize]
+        public void Initialize()
+        {
+        }
+
+        // ensure the default string handling still works
+        [TestMethod]
+        public void Read_JsonString_ReturnsString()
+        {
+            var stringValue = "Standard json string";
+            var trelloCardJson = $"{{\"desc\": \"{stringValue}\"}}";
+            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(trelloCardJson, _jsonDeserializeOptions);
+
+            Assert.AreEqual(stringValue, trelloCard.Desc);
+        }
+
+        // ensure the bools where there should be strings come through as bools
+        [TestMethod]
+        public void Read_JsonBoolInPlaceOfString_ReturnsString()
+        {
+            var trelloCardJson = "{\"desc\": true}";
+            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(trelloCardJson, _jsonDeserializeOptions);
+
+            Assert.AreEqual("true", trelloCard.Desc);
+        }
+
+        // ensure number conversion works
+        [TestMethod]
+        public void Read_JsonNumber_ReturnsString()
+        {
+            double numberValue = 123.45;
+            var trelloCardJson = $"{{\"desc\": {numberValue}}}";
+            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(trelloCardJson, _jsonDeserializeOptions);
+
+            Assert.AreEqual(numberValue.ToString(), trelloCard.Desc);
+        }
     }
 }

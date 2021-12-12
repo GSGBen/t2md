@@ -51,4 +51,42 @@ namespace GoldenSyrupGames.T2MD
             writer.WriteNumberValue(doubleValue);
         }
     }
+
+    /// <summary>
+    /// One user had a description of "true" that was stored in json as a boolean true.
+    /// Handle all weird string conversions
+    /// </summary>
+    public class TrelloStringJsonConverter : JsonConverter<String>
+    {
+        public override String Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.True)
+            {
+                // might need this to move the parsing forward
+                reader.GetBoolean();
+                return "true";
+            }
+            else if (reader.TokenType == JsonTokenType.False)
+            {
+                reader.GetBoolean();
+                return "false";
+            }
+            else if (reader.TokenType == JsonTokenType.String)
+            {
+                return reader.GetString() ?? "";
+            }
+            else if (reader.TokenType == JsonTokenType.Number)
+            {
+                // no checking for ints at the moment, this is a low use case at the moment
+                return reader.GetDouble().ToString();
+            }
+            // else
+            throw new System.Text.Json.JsonException();
+        }
+
+        public override void Write(Utf8JsonWriter writer, String stringValue, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(stringValue);
+        }
+    }
 }
