@@ -47,9 +47,9 @@ Example layout:
 Hey, do you like videogames? If so please check out my game **Grab Throw** on Steam, and add it to your wishlist. One gamemode is like dodgeball crossed with soccer except instead of balls you throw stacks of your own teammates. And there's plenty of others to come!
 
 <p align="center">
-  <a href=https://store.steampowered.com/app/1813590/Grab_Throw/?utm_source=github_t2md>
+  <a href=https://store.steampowered.com/app/1813590/Grab_n_Throw/?utm_source=github_t2md>
     <img src="images/throwing%202.gif">
   </a>
 </p>
 
-[<p align="center">**See more on Steam**</p>](https://store.steampowered.com/app/1813590/Grab_Throw/?utm_source=github_t2md)
+[<p align="center">**See more on Steam**</p>](https://store.steampowered.com/app/1813590/Grab_n_Throw/?utm_source=github_t2md)
