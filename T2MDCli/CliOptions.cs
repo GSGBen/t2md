@@ -17,8 +17,8 @@ namespace GoldenSyrupGames.T2MD
         [Option(
             "output-folder",
             Required = true,
-            HelpText = "The path under which the backups will be stored and the markdown folder structure created.\n" +
-            "Will be created if it doesn't exist."
+            HelpText = "The path under which the backups will be stored and the markdown folder structure created.\n"
+                + "Will be created if it doesn't exist."
         )]
         public string OutputPath { get; set; } = "";
 
@@ -27,9 +27,9 @@ namespace GoldenSyrupGames.T2MD
         [Option(
             "config",
             Default = "t2md.json",
-            HelpText = "The path to the configuration file containing the Trello API key and token.\n" +
-            "If not specified will default to t2md.json in the current (shell's) folder.\n" +
-            "If the file doesn't exist a template will be created there for you."
+            HelpText = "The path to the configuration file containing the Trello API key and token.\n"
+                + "If not specified will default to t2md.json in the current (shell's) folder.\n"
+                + "If the file doesn't exist a template will be created there for you."
         )]
         public string ConfigFilePath { get; set; } = "";
 
@@ -38,8 +38,8 @@ namespace GoldenSyrupGames.T2MD
         [Option(
             "max-card-filename-title-length",
             Default = 40,
-            HelpText = "The maximum number of characters that can be in the title in each card's files' filenames.\n" +
-            "Regardless of this the full title will be in the description card."
+            HelpText = "The maximum number of characters that can be in the title in each card's files' filenames.\n"
+                + "Regardless of this the full title will be in the description card."
         )]
         public int MaxCardFilenameTitleLength { get; set; } = 0;
 
@@ -51,9 +51,19 @@ namespace GoldenSyrupGames.T2MD
         )]
         public bool IgnoreFailedAttachmentDownloads { get; set; } = false;
 
+        // Obsidian doesn't work with back slashes. Allow replacing with forward slashes regardless of platform
+        [Option(
+            "always-use-forward-slashes",
+            Default = false,
+            HelpText = "Obsidian doesn't work with back slashes. "
+                + "If specified, always uses forward slashes for paths regardless of platform."
+        )]
+        public bool AlwaysUseForwardSlashes { get; set; } = false;
+
         public static Task PrintUsage(IEnumerable<Error> errors)
         {
-            Console.WriteLine(@"
+            Console.WriteLine(
+                @"
 Usage:
 
 - Run `t2md.exe --output-path <backup destination folder>` once to generate t2md.json in the current directory
@@ -64,7 +74,8 @@ Usage:
 - Run `t2md.exe --output-path <backup destination folder>` again.
   A t2md subfolder will be created under this and all Trello boards will be backed up to it.
   - **WARNING:** The entire t2md subfolder will be deleted and recreated each time.
-");
+"
+            );
             return Task.CompletedTask;
         }
 

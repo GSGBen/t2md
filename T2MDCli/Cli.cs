@@ -13,15 +13,16 @@ namespace GoldenSyrupGames.T2MD
 {
     public class Cli
     {
-        // create the HttpClient we'll use for all our requests.
-        // see https://www.aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
+        // create the HttpClient we'll use for all our requests. see
+        // https://www.aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
         private static HttpClient _httpClient = new HttpClient();
 
         // Trello credentials
         private static string _apiKey = "";
         private static string _apiToken = "";
 
-        // the path to the t2md folder inside the user-specified folder we write to
+        // the path to the t2md folder inside the user-specified folder we write
+        // to
         private static string _outputPath = "";
 
         // shared options for json work
@@ -29,25 +30,27 @@ namespace GoldenSyrupGames.T2MD
         {
             // match camelCase json to PascalCase C# class
             PropertyNameCaseInsensitive = true,
-            // some users have boards (in the per-board processing later, but set all together here)
-            // with pos values as strings, e.g. "123.45". Support those
+            // some users have boards (in the per-board processing later, but
+            // set all together here) with pos values as strings, e.g. "123.45".
+            // Support those
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
-            // Trello also (used to?) encode some positions as "bottom". Handle that
-            Converters =
-            {
-                new TrelloDoubleJsonConverter()
-            }
+            // Trello also (used to?) encode some positions as "bottom". Handle
+            // that
+            Converters = { new TrelloDoubleJsonConverter() }
         };
 
         static async Task Main(string[] args)
         {
             // get commandline arguments based on Options, otherwise fail and print help.
-            await Parser.Default.ParseArguments<CliOptions>(args).MapResult(
-                // when we have all valid options
-                RunAsync,
-                // when something's missing or wrong
-                CliOptions.PrintUsage
-            ).ConfigureAwait(false);
+            await Parser.Default
+                .ParseArguments<CliOptions>(args)
+                .MapResult(
+                    // when we have all valid options
+                    RunAsync,
+                    // when something's missing or wrong
+                    CliOptions.PrintUsage
+                )
+                .ConfigureAwait(false);
         }
 
         // Main() with parsed arguments.
@@ -73,23 +76,32 @@ namespace GoldenSyrupGames.T2MD
             {
                 string jsonString = File.ReadAllText(options.ConfigFilePath);
                 var configFileOptions = JsonSerializer.Deserialize<ConfigFileOptions>(jsonString);
-                
+
                 // ensure it contains what we need or get them to reenter it
                 if (configFileOptions == null)
                 {
-                    AnsiConsole.MarkupLine($"[red]Can't read data from {options.ConfigFilePath}. " +
-                        $"Please correct the file or delete it and run again to have it recreated.[/]");
+                    AnsiConsole.MarkupLine(
+                        $"[red]Can't read data from {options.ConfigFilePath}. "
+                            + $"Please correct the file or delete it and run again to have it recreated.[/]"
+                    );
                     Environment.Exit(1);
                 }
-                else if (string.IsNullOrEmpty(configFileOptions.ApiKey) || string.IsNullOrEmpty(configFileOptions.ApiToken))
+                else if (
+                    string.IsNullOrEmpty(configFileOptions.ApiKey)
+                    || string.IsNullOrEmpty(configFileOptions.ApiToken)
+                )
                 {
-                    AnsiConsole.MarkupLine($"[red]Can't find ApiKey or ApiToken in {options.ConfigFilePath}. " +
-                        $"Please correct the file or delete it and run again to have it recreated.[/]");
+                    AnsiConsole.MarkupLine(
+                        $"[red]Can't find ApiKey or ApiToken in {options.ConfigFilePath}. "
+                            + $"Please correct the file or delete it and run again to have it recreated.[/]"
+                    );
                     Environment.Exit(1);
                 }
                 else if (configFileOptions.ApiKey == "key" || configFileOptions.ApiToken == "token")
                 {
-                    AnsiConsole.MarkupLine($"[red]Please fill out ApiKey and ApiToken in {options.ConfigFilePath}.[/]");
+                    AnsiConsole.MarkupLine(
+                        $"[red]Please fill out ApiKey and ApiToken in {options.ConfigFilePath}.[/]"
+                    );
                     CliOptions.PrintUsage();
                     Environment.Exit(1);
                 }
@@ -103,17 +115,15 @@ namespace GoldenSyrupGames.T2MD
             // otherwise create the template json file if it doesn't exist
             else
             {
-                var configTemplate = new ConfigFileOptions
-                {
-                    ApiKey = @"key",
-                    ApiToken = @"token"
-                };
+                var configTemplate = new ConfigFileOptions { ApiKey = @"key", ApiToken = @"token" };
                 // pretty print
                 var serializerOptions = new JsonSerializerOptions { WriteIndented = true };
                 string jsonString = JsonSerializer.Serialize(configTemplate, serializerOptions);
                 File.WriteAllText(options.ConfigFilePath, jsonString);
-                AnsiConsole.MarkupLine($"[magenta]Created config file template {options.ConfigFilePath}. " +
-                    $"Please enter your API key and token there then run again.[/]");
+                AnsiConsole.MarkupLine(
+                    $"[magenta]Created config file template {options.ConfigFilePath}. "
+                        + $"Please enter your API key and token there then run again.[/]"
+                );
                 Environment.Exit(0);
             }
 
@@ -121,10 +131,15 @@ namespace GoldenSyrupGames.T2MD
             var url = $"https://api.trello.com/1/members/me/boards?key={_apiKey}&token={_apiToken}";
             string textResponse = await _httpClient.GetStringAsync(url).ConfigureAwait(false);
             var trelloApiBoards = new List<TrelloApiBoardModel>();
-            trelloApiBoards = JsonSerializer.Deserialize<List<TrelloApiBoardModel>>(textResponse, _jsonDeserializeOptions);
+            trelloApiBoards = JsonSerializer.Deserialize<List<TrelloApiBoardModel>>(
+                textResponse,
+                _jsonDeserializeOptions
+            );
             if (trelloApiBoards == null)
             {
-                throw new Exception("No boards retrieved from https://api.trello.com/1/members/me/boards");
+                throw new Exception(
+                    "No boards retrieved from https://api.trello.com/1/members/me/boards"
+                );
             }
 
             // ensure they all have the required properties (not natively possible with System.Text.Json)
@@ -132,9 +147,12 @@ namespace GoldenSyrupGames.T2MD
             {
                 if (!trelloApiBoard.AreAllRequiredFieldsFilled())
                 {
-                    throw new Exception("Boards retrieved from https://api.trello.com/1/members/me/boards missing required properties");
+                    throw new Exception(
+                        "Boards retrieved from https://api.trello.com/1/members/me/boards missing required properties"
+                    );
                 }
-            };
+            }
+            ;
 
             // list them
             AnsiConsole.MarkupLine("[blue]Boards to back up:[/]");
@@ -142,7 +160,7 @@ namespace GoldenSyrupGames.T2MD
             {
                 AnsiConsole.MarkupLine($"    [blue]{trelloApiBoard.Name}[/]");
             }
-            
+
             // process each board asynchronously
             AnsiConsole.MarkupLine("[blue]Processing each board:[/]");
             var boardTasks = new List<Task>();
@@ -161,10 +179,13 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="trelloApiBoard">Model of the board generated from the API call that enumerates them, not the downloaded json</param>
         /// <param name="options">The parsed options we received on the commandline from the user</param>
         /// <returns></returns>
-        private static async Task ProcessTrelloBoardAsync(TrelloApiBoardModel trelloApiBoard, CliOptions options)
+        private static async Task ProcessTrelloBoardAsync(
+            TrelloApiBoardModel trelloApiBoard,
+            CliOptions options
+        )
         {
             // quick testing
-            //if (trelloApiBoard.Name != "Test\\Board")
+            //if (trelloApiBoard.Name != "Computers")
             //{
             //    return;
             //}
@@ -179,15 +200,22 @@ namespace GoldenSyrupGames.T2MD
             using var request = new HttpRequestMessage(HttpMethod.Get, backupUrl);
             // don't auth with parameters, authorize with the weird header like the S3 requests:
             //     Authorization: OAuth oauth_consumer_key="<api key>", oauth_token="<api token>"
-            request.Headers.Add("Authorization", $"OAuth oauth_consumer_key=\"{_apiKey}\", oauth_token=\"{_apiToken}\"");
-            using HttpResponseMessage response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+            request.Headers.Add(
+                "Authorization",
+                $"OAuth oauth_consumer_key=\"{_apiKey}\", oauth_token=\"{_apiToken}\""
+            );
+            using HttpResponseMessage response = await _httpClient
+                .SendAsync(request)
+                .ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             // write the json to file (overwrite)
             string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
             string boardOutputFilePath = Path.Combine(_outputPath, $"{usableBoardName}.json");
             using FileStream fileStream = File.Create(boardOutputFilePath);
-            using Stream contentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            using Stream contentStream = await response.Content
+                .ReadAsStreamAsync()
+                .ConfigureAwait(false);
             await contentStream.CopyToAsync(fileStream).ConfigureAwait(false);
 
             // create a folder for each board.
@@ -201,7 +229,10 @@ namespace GoldenSyrupGames.T2MD
             // parse the board's json. first reset the stream as we read it above
             contentStream.Position = 0;
             using var boardJsonStreamReader = new StreamReader(contentStream);
-            var trelloBoard = JsonSerializer.Deserialize<TrelloBoardModel>(await boardJsonStreamReader.ReadToEndAsync().ConfigureAwait(false), _jsonDeserializeOptions);
+            var trelloBoard = JsonSerializer.Deserialize<TrelloBoardModel>(
+                await boardJsonStreamReader.ReadToEndAsync().ConfigureAwait(false),
+                _jsonDeserializeOptions
+            );
             if (trelloBoard == null)
             {
                 throw new Exception($"Failed to parse {boardOutputFilePath}");
@@ -214,7 +245,9 @@ namespace GoldenSyrupGames.T2MD
             }
 
             // sort the lists by their position in the board so we order the same way as the GUI
-            IOrderedEnumerable<TrelloListModel> orderedLists = trelloBoard.Lists.OrderBy(list => list.Pos);
+            IOrderedEnumerable<TrelloListModel> orderedLists = trelloBoard.Lists.OrderBy(
+                list => list.Pos
+            );
 
             // create folders for each list.
             // number them so they're shown in order
@@ -222,20 +255,30 @@ namespace GoldenSyrupGames.T2MD
             var archivedListIndex = 0;
             foreach (TrelloListModel trelloList in orderedLists)
             {
-                ProcessTrelloList(trelloList, archivedListPath, boardPath, ref archivedListIndex, ref nonArchivedListIndex);
+                ProcessTrelloList(
+                    trelloList,
+                    archivedListPath,
+                    boardPath,
+                    ref archivedListIndex,
+                    ref nonArchivedListIndex
+                );
             }
 
             // sort the cards by their position in their list so we order by list order.
             // we don't care about cross-list position, just the position relative to other cards in the list.
             // fun fact: Trello doesn't use contiguous ints for their position: they use large-ranging floats so that
             // card positions can be updated without recalculating all.
-            IOrderedEnumerable<TrelloCardModel> orderedCards = trelloBoard.Cards.OrderBy(card => card.Pos);
+            IOrderedEnumerable<TrelloCardModel> orderedCards = trelloBoard.Cards.OrderBy(
+                card => card.Pos
+            );
 
             // process each card
             var CardTasks = new List<Task>();
             foreach (TrelloCardModel trelloCard in orderedCards)
             {
-                TrelloListModel parentList = trelloBoard.Lists.Where(list => list.ID == trelloCard.IDList).First();
+                TrelloListModel parentList = trelloBoard.Lists
+                    .Where(list => list.ID == trelloCard.IDList)
+                    .First();
 
                 // give the card the right index and path depending on whether it's archived or not.
                 // outside the function because they're all running in parallel and would read the wrong index
@@ -253,7 +296,9 @@ namespace GoldenSyrupGames.T2MD
                 }
 
                 // run them in parallel
-                CardTasks.Add(ProcessTrelloCardAsync(trelloCard, cardIndex, listPath, trelloBoard, options));
+                CardTasks.Add(
+                    ProcessTrelloCardAsync(trelloCard, cardIndex, listPath, trelloBoard, options)
+                );
 
                 // again outside the function because they're all running in parallel
                 if (trelloCard.Closed)
@@ -266,10 +311,10 @@ namespace GoldenSyrupGames.T2MD
                 }
             }
             await Task.WhenAll(CardTasks);
-            
+
             AnsiConsole.MarkupLine($"    [green]Finished {trelloApiBoard.Name}[/]");
         }
-    
+
         /// <summary>
         /// Creates a numbered folder for the list in the right subdirectory (based on whether it's archived or not) and records the path in its model object.
         /// Updates the list index to be passed to the next index.
@@ -296,17 +341,17 @@ namespace GoldenSyrupGames.T2MD
             // put archived lists in a subfolder
             string outerPath = trelloList.Closed ? archivedListPath : boardPath;
             int listIndex = trelloList.Closed ? archivedListIndex : nonArchivedListIndex;
-            
+
             // create a folder for each list.
             // remove special characters
             string usableListName = FileSystem.SanitiseForPath(trelloList.Name);
             var listFolderName = $"{listIndex} {usableListName}";
             string listPath = Path.Combine(outerPath, listFolderName);
             Directory.CreateDirectory(listPath);
-            
+
             // record it as we'll need it for the cards and we don't do cards per-list
             trelloList.FolderPath = listPath;
-            
+
             // do the same for a subfolder for archived cards
             string archivedCardPath = Path.Combine(listPath, "archived");
             Directory.CreateDirectory(archivedCardPath);
@@ -343,33 +388,71 @@ namespace GoldenSyrupGames.T2MD
         )
         {
             // restrict the maximum filename length for all files. Just via the title, not any suffix or prefix
-            int actualOrRestrictedLength = Math.Min(trelloCard.Name.Length, options.MaxCardFilenameTitleLength);
+            int actualOrRestrictedLength = Math.Min(
+                trelloCard.Name.Length,
+                options.MaxCardFilenameTitleLength
+            );
             string usableCardName = trelloCard.Name.Substring(0, actualOrRestrictedLength);
             // remove special characters
             usableCardName = FileSystem.SanitiseForPath(usableCardName);
 
             // write the description to a markdown file
-            Task<(string, string)> WriteCardDescriptionTask = WriteCardDescriptionAsync(trelloCard, cardFolderPath, cardIndex, usableCardName, options);
+            Task<(string, string)> WriteCardDescriptionTask = WriteCardDescriptionAsync(
+                trelloCard,
+                cardFolderPath,
+                cardIndex,
+                usableCardName,
+                options
+            );
 
             // write the checklists to a file if there are any
-            Task WriteCardChecklistsTask = WriteCardChecklistsAsync(trelloCard, trelloBoard, cardFolderPath, cardIndex, usableCardName, options);
+            Task WriteCardChecklistsTask = WriteCardChecklistsAsync(
+                trelloCard,
+                trelloBoard,
+                cardFolderPath,
+                cardIndex,
+                usableCardName,
+                options
+            );
 
             // download uploaded attachments if there are any. Only direct file uploads or image data pastes, not e.g. pasted http links
-            IEnumerable<TrelloAttachmentModel> uploadedAttachments = trelloCard.Attachments.Where(attachment => attachment.IsUpload);
+            IEnumerable<TrelloAttachmentModel> uploadedAttachments = trelloCard.Attachments.Where(
+                attachment => attachment.IsUpload
+            );
             if (uploadedAttachments.Count() > 0)
             {
                 await DownloadTrelloCardAttachmentsAsync(
-                    uploadedAttachments, trelloCard, cardIndex, usableCardName,
-                    cardFolderPath, options.IgnoreFailedAttachmentDownloads, trelloBoard.Name);
+                    uploadedAttachments,
+                    trelloCard,
+                    cardIndex,
+                    usableCardName,
+                    cardFolderPath,
+                    options.IgnoreFailedAttachmentDownloads,
+                    options.AlwaysUseForwardSlashes,
+                    trelloBoard.Name
+                );
             }
 
             // save the path and contents of the description and comment files so we can find/replace URLs in them
-            (string commentsContents, string commentsPath) = await WriteCardCommentsAsync(trelloCard, trelloBoard, cardFolderPath, cardIndex, usableCardName, options);
+            (string commentsContents, string commentsPath) = await WriteCardCommentsAsync(
+                trelloCard,
+                trelloBoard,
+                cardFolderPath,
+                cardIndex,
+                usableCardName,
+                options
+            );
             (string descriptionContents, string descriptionPath) = await WriteCardDescriptionTask;
             await WriteCardChecklistsTask;
 
             // replace full http attachment URLs with local relative paths so the description and comments now link to the downloaded copies.
-            await UpdateAttachmentReferencesAsync(uploadedAttachments, descriptionContents, descriptionPath, commentsContents, commentsPath);
+            await UpdateAttachmentReferencesAsync(
+                uploadedAttachments,
+                descriptionContents,
+                descriptionPath,
+                commentsContents,
+                commentsPath
+            );
         }
 
         /// <summary>
@@ -381,7 +464,7 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="usableCardName">The length-limited and usable version of the card title - special characters should be removed already.</param>
         /// <param name="options">The parsed options we received on the commandline from the user</param>
         /// <returns>Returns the markdown contents of the description in the first tuple member and the path to the description file in the second.</returns>
-        private static async Task<(string, string tring)> WriteCardDescriptionAsync(
+        private static async Task<(string, string)> WriteCardDescriptionAsync(
             TrelloCardModel trelloCard,
             string cardFolderPath,
             int cardIndex,
@@ -395,7 +478,8 @@ namespace GoldenSyrupGames.T2MD
             var descriptionFilename = $"{cardIndex} {usableCardName}.md";
             // put archived cards in a subfolder
             string descriptionPath = Path.Join(cardFolderPath, descriptionFilename);
-            await File.WriteAllTextAsync(descriptionPath, descriptionContents).ConfigureAwait(false);
+            await File.WriteAllTextAsync(descriptionPath, descriptionContents)
+                .ConfigureAwait(false);
             return (descriptionContents, descriptionPath);
         }
 
@@ -420,13 +504,16 @@ namespace GoldenSyrupGames.T2MD
         )
         {
             // checklists are under the board so retrieve the ones for this card
-            IEnumerable<TrelloChecklistModel> cardChecklists = trelloBoard.Checklists.Where(checklist => trelloCard.IDChecklists.Contains(checklist.ID));
+            IEnumerable<TrelloChecklistModel> cardChecklists = trelloBoard.Checklists.Where(
+                checklist => trelloCard.IDChecklists.Contains(checklist.ID)
+            );
             if (cardChecklists.Count() > 0)
             {
                 // start with a modified title for the whole file
                 var checklistsContents = $"# {trelloCard.Name} - Checklists\n\n";
                 // maintain the checklist order in the card
-                IOrderedEnumerable<TrelloChecklistModel> orderedCardChecklists = cardChecklists.OrderBy(checklist => checklist.Pos);
+                IOrderedEnumerable<TrelloChecklistModel> orderedCardChecklists =
+                    cardChecklists.OrderBy(checklist => checklist.Pos);
                 foreach (TrelloChecklistModel trelloChecklist in orderedCardChecklists)
                 {
                     // write each checklist title as the next subheading
@@ -443,7 +530,8 @@ namespace GoldenSyrupGames.T2MD
                 // write the file
                 var checklistsFilename = $"{cardIndex} {usableCardName} - Checklists.md";
                 string checklistsPath = Path.Join(cardFolderPath, checklistsFilename);
-                await File.WriteAllTextAsync(checklistsPath, checklistsContents).ConfigureAwait(false);
+                await File.WriteAllTextAsync(checklistsPath, checklistsContents)
+                    .ConfigureAwait(false);
             }
         }
 
@@ -468,17 +556,20 @@ namespace GoldenSyrupGames.T2MD
         )
         {
             // comments are again under the board
-            IEnumerable<TrelloActionModel> cardComments = trelloBoard.Actions.Where(action =>
-            {
-                return action.Type == "commentCard"
-                && action.Data.Card.ID == trelloCard.ID;
-            });
+            IEnumerable<TrelloActionModel> cardComments = trelloBoard.Actions.Where(
+                action =>
+                {
+                    return action.Type == "commentCard" && action.Data.Card.ID == trelloCard.ID;
+                }
+            );
             if (cardComments.Count() > 0)
             {
                 // start with a modified title for the whole file
                 var commentsContents = $"# {trelloCard.Name} - Comments\n\n";
                 // order the comments by date. ISO 8601 dates can be sorted as a string
-                IOrderedEnumerable<TrelloActionModel> orderedCardComments = cardComments.OrderBy(comment => comment.Date);
+                IOrderedEnumerable<TrelloActionModel> orderedCardComments = cardComments.OrderBy(
+                    comment => comment.Date
+                );
                 foreach (TrelloActionModel trelloComment in orderedCardComments)
                 {
                     // separate each card's contents
@@ -495,7 +586,7 @@ namespace GoldenSyrupGames.T2MD
                 return (commentsContents, commentsPath);
             }
             // else
-            return ("","");
+            return ("", "");
         }
 
         /// <summary>
@@ -506,7 +597,8 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="cardIndex">The order of this card in the list, depending on whether it's archived or not.</param>
         /// <param name="usableCardName">The length-limited and usable version of the card title - special characters should be removed already.</param>
         /// <param name="cardFolderPath">The archived or non-archived folder items in this card write to.</param>
-        /// <param name="IgnoreFailedAttachmentDownloads">If specified, print a warning when an exception is encountered instead of propagating.</param>
+        /// <param name="ignoreFailedAttachmentDownloads">If specified, print a warning when an exception is encountered instead of propagating.</param>
+        /// <param name="alwaysUseForwardSlashes">If specified, replace back slashes in paths with forward slashes.</param>
         /// <param name="boardName">The name of the board this attachment is in a card under, for logging.</param>
         /// <returns></returns>
         private static async Task DownloadTrelloCardAttachmentsAsync(
@@ -515,7 +607,8 @@ namespace GoldenSyrupGames.T2MD
             int cardIndex,
             string usableCardName,
             string cardFolderPath,
-            bool IgnoreFailedAttachmentDownloads,
+            bool ignoreFailedAttachmentDownloads,
+            bool alwaysUseForwardSlashes,
             string boardName
         )
         {
@@ -526,11 +619,13 @@ namespace GoldenSyrupGames.T2MD
                 string attachmentFolderPath = Path.Join(cardFolderPath, attachmentFolderName);
                 Directory.CreateDirectory(attachmentFolderPath);
 
-                // start creating a new markdown file listing all the attachments, their actual names and paths.
-                // a functional but unformatted markdown table for now
-                var attachmentListContents = $"# {trelloCard.Name} - Attachments\n\n" +
-                    $"id | original fileName | relative downloaded path\n" +
-                    $"---|---|---\n";
+                // start creating a new markdown file listing all the
+                // attachments, their actual names and paths. a functional but
+                // unformatted markdown table for now
+                var attachmentListContents =
+                    $"# {trelloCard.Name} - Attachments\n\n"
+                    + $"id | original fileName | relative downloaded path\n"
+                    + $"---|---|---\n";
 
                 // download all uploaded attachments into that folder
                 var AttachmentDownloadTasks = new List<Task<string>>();
@@ -538,7 +633,15 @@ namespace GoldenSyrupGames.T2MD
                 {
                     AttachmentDownloadTasks.Add(
                         DownloadTrelloCardAttachmentAsync(
-                            attachment, attachmentFolderPath, cardFolderPath, IgnoreFailedAttachmentDownloads, boardName, usableCardName));
+                            attachment,
+                            attachmentFolderPath,
+                            cardFolderPath,
+                            ignoreFailedAttachmentDownloads,
+                            alwaysUseForwardSlashes,
+                            boardName,
+                            usableCardName
+                        )
+                    );
                 }
                 string[] AttachmentTableLines = await Task.WhenAll(AttachmentDownloadTasks);
 
@@ -548,7 +651,8 @@ namespace GoldenSyrupGames.T2MD
                 // write the file listing all the attachments
                 var attachmentListFilename = $"{cardIndex} {usableCardName} - Attachments.md";
                 string attachmentListPath = Path.Join(cardFolderPath, attachmentListFilename);
-                await File.WriteAllTextAsync(attachmentListPath, attachmentListContents).ConfigureAwait(false);
+                await File.WriteAllTextAsync(attachmentListPath, attachmentListContents)
+                    .ConfigureAwait(false);
             }
         }
 
@@ -559,6 +663,7 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="attachmentFolderPath">The folder we save attachments into for this card.</param>
         /// <param name="cardFolderPath">The archived or non-archived folder items in this card write to.</param>
         /// <param name="IgnoreFailedAttachmentDownloads">If specified, print a warning when an exception is encountered instead of propagating.</param>
+        /// <param name="alwaysUseForwardSlashes">If specified, replace back slashes in paths with forward slashes.</param>
         /// <param name="boardName">The name of the board this attachment is in a card under, for logging.</param>
         /// <param name="cardName">The name of the card this attachment is attached to, for logging.</returns>
         public static async Task<string> DownloadTrelloCardAttachmentAsync(
@@ -566,6 +671,7 @@ namespace GoldenSyrupGames.T2MD
             string attachmentFolderPath,
             string cardFolderPath,
             bool ignoreFailedAttachmentDownloads,
+            bool alwaysUseForwardSlashes,
             string boardName,
             string cardName
         )
@@ -573,36 +679,71 @@ namespace GoldenSyrupGames.T2MD
             try
             {
                 // download the attachment
-                using var attachmentRequest = new HttpRequestMessage(HttpMethod.Get, attachment.Url);
-                attachmentRequest.Headers.Add("Authorization", $"OAuth oauth_consumer_key=\"{_apiKey}\", oauth_token=\"{_apiToken}\"");
-                using HttpResponseMessage attachmentResponse = await _httpClient.SendAsync(attachmentRequest).ConfigureAwait(false);
+                using var attachmentRequest = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    attachment.Url
+                );
+                attachmentRequest.Headers.Add(
+                    "Authorization",
+                    $"OAuth oauth_consumer_key=\"{_apiKey}\", oauth_token=\"{_apiToken}\""
+                );
+                using HttpResponseMessage attachmentResponse = await _httpClient
+                    .SendAsync(attachmentRequest)
+                    .ConfigureAwait(false);
                 attachmentResponse.EnsureSuccessStatusCode();
 
                 string attachmentFileExtension = Path.GetExtension(attachment.FileName);
                 // use the ID to create a unique filename
-                string attachmentPath = Path.Combine(attachmentFolderPath, $"{attachment.ID}{attachmentFileExtension}");
+                string attachmentPath = Path.Combine(
+                    attachmentFolderPath,
+                    $"{attachment.ID}{attachmentFileExtension}"
+                );
                 // write the attachment to disk
                 using FileStream attachmentFileStream = File.Create(attachmentPath);
-                using Stream attachmentContentStream = await attachmentResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                await attachmentContentStream.CopyToAsync(attachmentFileStream).ConfigureAwait(false);
+                using Stream attachmentContentStream = await attachmentResponse.Content
+                    .ReadAsStreamAsync()
+                    .ConfigureAwait(false);
+                await attachmentContentStream
+                    .CopyToAsync(attachmentFileStream)
+                    .ConfigureAwait(false);
 
                 // calculate the new URL, from where the markdown files will be to the attachment file.
                 // Markdown supports local relative paths
-                string relativeAttachmentPath = Path.GetRelativePath(cardFolderPath, attachmentPath);
+                string relativeAttachmentPath =
+                    ".\\" + Path.GetRelativePath(cardFolderPath, attachmentPath);
                 // prepare the line to add to the file
-                string relativeAttachmentPathSpacesReplaced = relativeAttachmentPath.Replace(" ", "%20");
-                return $"{attachment.ID} | {attachment.FileName} | [.\\{relativeAttachmentPath}]({relativeAttachmentPathSpacesReplaced})";
+                string relativeAttachmentPathSpacesReplaced = relativeAttachmentPath.Replace(
+                    " ",
+                    "%20"
+                );
+
+                // backslashes don't work in Obsidian. If specified convert them to forward slashes
+                if (alwaysUseForwardSlashes)
+                {
+                    relativeAttachmentPath = relativeAttachmentPath.Replace("\\", "/");
+                    relativeAttachmentPathSpacesReplaced =
+                        relativeAttachmentPathSpacesReplaced.Replace("\\", "/");
+                }
+
+                // update the model so the replacement works
+                attachment.RelativeAttachmentPathSpacesReplaced =
+                    relativeAttachmentPathSpacesReplaced;
+
+                return $"{attachment.ID} | {attachment.FileName} | [{relativeAttachmentPath}]({relativeAttachmentPathSpacesReplaced})";
             }
             catch (Exception exception)
             {
                 if (ignoreFailedAttachmentDownloads)
                 {
                     // print a warning instead
-                    AnsiConsole.MarkupLine($"[yellow]Failed to download attachment {attachment.FileName} from {attachment.Url}" +
-                        $"    Board: \"{boardName}\"" +
-                        $"    Card: {cardName}" +
-                        // using in interpolation automatically calls exception.ToString()
-                        $"    Exception: {exception}[/]");
+                    AnsiConsole.MarkupLine(
+                        $"[yellow]Failed to download attachment {attachment.FileName} from {attachment.Url}"
+                            + $"    Board: \"{boardName}\""
+                            + $"    Card: {cardName}"
+                            +
+                            // using in interpolation automatically calls exception.ToString()
+                            $"    Exception: {exception}[/]"
+                    );
 
                     return $"{attachment.ID} | {attachment.FileName} | **failed to download**";
                 }
@@ -631,6 +772,12 @@ namespace GoldenSyrupGames.T2MD
             string commentsPath
         )
         {
+            // debug
+            //if (descriptionPath.Contains("nftables"))
+            //{
+            //    Console.WriteLine("nftables");
+            //}
+
             if (uploadedAttachments.Count() > 0)
             {
                 // we're going to and replace and URL references. Do it in a new variable so we can check if we made any changes
@@ -640,18 +787,26 @@ namespace GoldenSyrupGames.T2MD
                 foreach (TrelloAttachmentModel attachment in uploadedAttachments)
                 {
                     // find and replace attachment URLs in descriptions and comments with the new relative URLs
-                    replacedDescriptionContents = replacedDescriptionContents.Replace(attachment.Url, attachment.RelativeAttachmentPathSpacesReplaced);
-                    replacedCommentsContents = replacedCommentsContents.Replace(attachment.Url, attachment.RelativeAttachmentPathSpacesReplaced);
+                    replacedDescriptionContents = replacedDescriptionContents.Replace(
+                        attachment.Url,
+                        attachment.RelativeAttachmentPathSpacesReplaced
+                    );
+                    replacedCommentsContents = replacedCommentsContents.Replace(
+                        attachment.Url,
+                        attachment.RelativeAttachmentPathSpacesReplaced
+                    );
                 }
 
                 // if we replaced any URLs in the description or comments, update them
                 if (replacedDescriptionContents != descriptionContents)
                 {
-                    await File.WriteAllTextAsync(descriptionPath, replacedDescriptionContents).ConfigureAwait(false);
+                    await File.WriteAllTextAsync(descriptionPath, replacedDescriptionContents)
+                        .ConfigureAwait(false);
                 }
                 if (replacedCommentsContents != commentsContents)
                 {
-                    await File.WriteAllTextAsync(commentsPath, replacedCommentsContents).ConfigureAwait(false);
+                    await File.WriteAllTextAsync(commentsPath, replacedCommentsContents)
+                        .ConfigureAwait(false);
                 }
             }
         }

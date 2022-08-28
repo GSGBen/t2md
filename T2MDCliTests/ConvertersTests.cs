@@ -11,17 +11,12 @@ namespace GoldenSyrupGames.T2MD.Tests
         {
             PropertyNameCaseInsensitive = true,
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
-            Converters =
-            {
-                new TrelloDoubleJsonConverter()
-            }
+            Converters = { new TrelloDoubleJsonConverter() }
         };
 
         // runs before each test
         [TestInitialize]
-        public void Initialize()
-        {
-        }
+        public void Initialize() { }
 
         // ensure the default number handling still works (double)
         [TestMethod]
@@ -29,7 +24,10 @@ namespace GoldenSyrupGames.T2MD.Tests
         {
             double number = 65535.0;
             var trelloCardJson = $"{{\"pos\": {number}}}";
-            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(trelloCardJson, _jsonDeserializeOptions);
+            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(
+                trelloCardJson,
+                _jsonDeserializeOptions
+            );
 
             Assert.AreEqual(number, trelloCard.Pos);
         }
@@ -40,7 +38,10 @@ namespace GoldenSyrupGames.T2MD.Tests
         {
             int number = 65535;
             var trelloCardJson = $"{{\"pos\": {number}}}";
-            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(trelloCardJson, _jsonDeserializeOptions);
+            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(
+                trelloCardJson,
+                _jsonDeserializeOptions
+            );
 
             Assert.AreEqual(number, trelloCard.Pos);
         }
@@ -51,7 +52,10 @@ namespace GoldenSyrupGames.T2MD.Tests
         {
             double number = 65535.0;
             var trelloCardJson = $"{{\"pos\": \"{number}\"}}";
-            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(trelloCardJson, _jsonDeserializeOptions);
+            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(
+                trelloCardJson,
+                _jsonDeserializeOptions
+            );
 
             Assert.AreEqual(number, trelloCard.Pos);
         }
@@ -61,7 +65,10 @@ namespace GoldenSyrupGames.T2MD.Tests
         public void Read_Bottom_ReturnsDouble()
         {
             var trelloCardJson = "{\"pos\": \"bottom\"}";
-            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(trelloCardJson, _jsonDeserializeOptions);
+            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(
+                trelloCardJson,
+                _jsonDeserializeOptions
+            );
 
             Assert.IsInstanceOfType(trelloCard.Pos, typeof(double));
         }
@@ -74,17 +81,12 @@ namespace GoldenSyrupGames.T2MD.Tests
         {
             PropertyNameCaseInsensitive = true,
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
-            Converters =
-            {
-                new TrelloStringJsonConverter()
-            }
+            Converters = { new TrelloStringJsonConverter() }
         };
 
         // runs before each test
         [TestInitialize]
-        public void Initialize()
-        {
-        }
+        public void Initialize() { }
 
         // ensure the default string handling still works
         [TestMethod]
@@ -92,7 +94,10 @@ namespace GoldenSyrupGames.T2MD.Tests
         {
             var stringValue = "Standard json string";
             var trelloCardJson = $"{{\"desc\": \"{stringValue}\"}}";
-            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(trelloCardJson, _jsonDeserializeOptions);
+            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(
+                trelloCardJson,
+                _jsonDeserializeOptions
+            );
 
             Assert.AreEqual(stringValue, trelloCard.Desc);
         }
@@ -102,7 +107,10 @@ namespace GoldenSyrupGames.T2MD.Tests
         public void Read_JsonBoolInPlaceOfString_ReturnsString()
         {
             var trelloCardJson = "{\"desc\": true}";
-            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(trelloCardJson, _jsonDeserializeOptions);
+            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(
+                trelloCardJson,
+                _jsonDeserializeOptions
+            );
 
             Assert.AreEqual("true", trelloCard.Desc);
         }
@@ -113,7 +121,10 @@ namespace GoldenSyrupGames.T2MD.Tests
         {
             double numberValue = 123.45;
             var trelloCardJson = $"{{\"desc\": {numberValue}}}";
-            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(trelloCardJson, _jsonDeserializeOptions);
+            var trelloCard = JsonSerializer.Deserialize<TrelloCardModel>(
+                trelloCardJson,
+                _jsonDeserializeOptions
+            );
 
             Assert.AreEqual(numberValue.ToString(), trelloCard.Desc);
         }

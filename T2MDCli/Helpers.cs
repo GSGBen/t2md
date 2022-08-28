@@ -16,7 +16,10 @@ namespace GoldenSyrupGames.T2MD
         /// Raises an exception if unsuccessful.
         /// </summary>
         /// <exception cref="EnsureSuccessStatusCode "></exception>
-        public static async Task<JsonDocument> GetJsonDocumentAsync(this HttpClient httpClient, string url)
+        public static async Task<JsonDocument> GetJsonDocumentAsync(
+            this HttpClient httpClient,
+            string url
+        )
         {
             using var httpRequest = new HttpRequestMessage(HttpMethod.Get, url);
             using var response = await httpClient.SendAsync(httpRequest).ConfigureAwait(false);
@@ -35,7 +38,10 @@ namespace GoldenSyrupGames.T2MD
         /// Raises an exception if unsuccessful.
         /// </summary>
         /// <exception cref="EnsureSuccessStatusCode "></exception>
-        public static async Task<JsonDocument> GetJsonDocumentAsync(this HttpClient httpClient, HttpRequestMessage httpRequest)
+        public static async Task<JsonDocument> GetJsonDocumentAsync(
+            this HttpClient httpClient,
+            HttpRequestMessage httpRequest
+        )
         {
             using var response = await httpClient.SendAsync(httpRequest).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -72,7 +78,10 @@ namespace GoldenSyrupGames.T2MD
         /// Raises an exception if unsuccessful.
         /// </summary>
         /// <exception cref="EnsureSuccessStatusCode "></exception>
-        public static async Task<string> GetStringAsync(this HttpClient httpClient, HttpRequestMessage httpRequest)
+        public static async Task<string> GetStringAsync(
+            this HttpClient httpClient,
+            HttpRequestMessage httpRequest
+        )
         {
             using var response = await httpClient.SendAsync(httpRequest).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -90,16 +99,24 @@ namespace GoldenSyrupGames.T2MD
     {
         /// <summary>
         /// Hopefully a fix for folder-in-use errors when deleting within Dropbox.
-        /// Depth-first recursive delete, with handling for descendant 
+        /// Depth-first recursive delete, with handling for descendant
         /// directories open in Windows Explorer.
         /// Modified from https://stackoverflow.com/a/1703799.
         /// WARNING: runs recursively so can worst-case delay for total folders * retries * delay, but this is unlikely.
         /// </summary>
-        public static void DeleteDirectoryRecursivelyWithRetriesAndDelay(string path, int maxRetries, int delayMilliseconds)
+        public static void DeleteDirectoryRecursivelyWithRetriesAndDelay(
+            string path,
+            int maxRetries,
+            int delayMilliseconds
+        )
         {
             foreach (string directory in Directory.GetDirectories(path))
             {
-                DeleteDirectoryRecursivelyWithRetriesAndDelay(directory, maxRetries, delayMilliseconds);
+                DeleteDirectoryRecursivelyWithRetriesAndDelay(
+                    directory,
+                    maxRetries,
+                    delayMilliseconds
+                );
             }
 
             int currentRetries = 0;
@@ -142,7 +159,15 @@ namespace GoldenSyrupGames.T2MD
         {
             // remove special characters
             char[] unusableCharacters = Path.GetInvalidFileNameChars();
-            return String.Join("_", FolderOrFileName.Split(unusableCharacters, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
+            return String
+                .Join(
+                    "_",
+                    FolderOrFileName.Split(
+                        unusableCharacters,
+                        StringSplitOptions.RemoveEmptyEntries
+                    )
+                )
+                .TrimEnd('.');
         }
     }
 }

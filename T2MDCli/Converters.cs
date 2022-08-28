@@ -13,7 +13,11 @@ namespace GoldenSyrupGames.T2MD
     /// </summary>
     public class TrelloDoubleJsonConverter : JsonConverter<Double>
     {
-        public override Double Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override Double Read(
+            ref Utf8JsonReader reader,
+            Type typeToConvert,
+            JsonSerializerOptions options
+        )
         {
             if (reader.TokenType == JsonTokenType.String)
             {
@@ -34,7 +38,9 @@ namespace GoldenSyrupGames.T2MD
                 }
                 else
                 {
-                    throw new System.Text.Json.JsonException($"Couldn't parse the string `{stringValue}` as a double or as one of Trello's positions");
+                    throw new System.Text.Json.JsonException(
+                        $"Couldn't parse the string `{stringValue}` as a double or as one of Trello's positions"
+                    );
                 }
             }
             // double without string
@@ -46,7 +52,11 @@ namespace GoldenSyrupGames.T2MD
             throw new System.Text.Json.JsonException();
         }
 
-        public override void Write(Utf8JsonWriter writer, Double doubleValue, JsonSerializerOptions options)
+        public override void Write(
+            Utf8JsonWriter writer,
+            Double doubleValue,
+            JsonSerializerOptions options
+        )
         {
             writer.WriteNumberValue(doubleValue);
         }
@@ -58,7 +68,11 @@ namespace GoldenSyrupGames.T2MD
     /// </summary>
     public class TrelloStringJsonConverter : JsonConverter<String>
     {
-        public override String Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override String Read(
+            ref Utf8JsonReader reader,
+            Type typeToConvert,
+            JsonSerializerOptions options
+        )
         {
             if (reader.TokenType == JsonTokenType.True)
             {
@@ -84,7 +98,11 @@ namespace GoldenSyrupGames.T2MD
             throw new System.Text.Json.JsonException();
         }
 
-        public override void Write(Utf8JsonWriter writer, String stringValue, JsonSerializerOptions options)
+        public override void Write(
+            Utf8JsonWriter writer,
+            String stringValue,
+            JsonSerializerOptions options
+        )
         {
             writer.WriteStringValue(stringValue);
         }
