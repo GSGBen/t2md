@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.30717.126
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "T2MDCli", "T2MDCli\T2MDCli.csproj", "{48126B6E-EEBE-496B-913C-6D71879C452C}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "T2MDCliTests", "T2MDCliTests\T2MDCliTests.csproj", "{C3AE5157-D507-40AF-9FC8-A5E4125CCE03}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{48126B6E-EEBE-496B-913C-6D71879C452C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{48126B6E-EEBE-496B-913C-6D71879C452C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{48126B6E-EEBE-496B-913C-6D71879C452C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3AE5157-D507-40AF-9FC8-A5E4125CCE03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3AE5157-D507-40AF-9FC8-A5E4125CCE03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3AE5157-D507-40AF-9FC8-A5E4125CCE03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3AE5157-D507-40AF-9FC8-A5E4125CCE03}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

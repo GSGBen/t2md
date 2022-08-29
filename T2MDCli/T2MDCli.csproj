@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Nullable>Enable</Nullable>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>GoldenSyrupGames.T2MD</RootNamespace>
     <AssemblyName>t2md</AssemblyName>
     <Authors>Ben Renninson</Authors>
