@@ -30,12 +30,10 @@ namespace GoldenSyrupGames.T2MD
         {
             // match camelCase json to PascalCase C# class
             PropertyNameCaseInsensitive = true,
-            // some users have boards (in the per-board processing later, but
-            // set all together here) with pos values as strings, e.g. "123.45".
-            // Support those
+            // some users have boards (in the per-board processing later, but set all together here)
+            // with pos values as strings, e.g. "123.45". Support those
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
-            // Trello also (used to?) encode some positions as "bottom". Handle
-            // that
+            // Trello also (used to?) encode some positions as "bottom". Handle that
             Converters = { new TrelloDoubleJsonConverter() }
         };
 
@@ -66,7 +64,8 @@ namespace GoldenSyrupGames.T2MD
             // recreate it every time
             if (Directory.Exists(_outputPath))
             {
-                // give explorer and maybe Dropbox time to close their handles. `Directory.Delete` was throwing "file in use"
+                // give explorer and maybe Dropbox time to close their handles. `Directory.Delete`
+                // was throwing "file in use"
                 FileSystem.DeleteDirectoryRecursivelyWithRetriesAndDelay(_outputPath, 10, 100);
             }
             Directory.CreateDirectory(_outputPath);
@@ -82,7 +81,8 @@ namespace GoldenSyrupGames.T2MD
                 {
                     AnsiConsole.MarkupLine(
                         $"[red]Can't read data from {options.ConfigFilePath}. "
-                            + $"Please correct the file or delete it and run again to have it recreated.[/]"
+                            + $"Please correct the file or delete it and run again to have it "
+                            + $"recreated.[/]"
                     );
                     Environment.Exit(1);
                 }
@@ -93,7 +93,8 @@ namespace GoldenSyrupGames.T2MD
                 {
                     AnsiConsole.MarkupLine(
                         $"[red]Can't find ApiKey or ApiToken in {options.ConfigFilePath}. "
-                            + $"Please correct the file or delete it and run again to have it recreated.[/]"
+                            + $"Please correct the file or delete it and run again to have it "
+                            + $"recreated.[/]"
                     );
                     Environment.Exit(1);
                 }
@@ -142,13 +143,15 @@ namespace GoldenSyrupGames.T2MD
                 );
             }
 
-            // ensure they all have the required properties (not natively possible with System.Text.Json)
+            // ensure they all have the required properties (not natively possible with
+            // System.Text.Json)
             foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards)
             {
                 if (!trelloApiBoard.AreAllRequiredFieldsFilled())
                 {
                     throw new Exception(
-                        "Boards retrieved from https://api.trello.com/1/members/me/boards missing required properties"
+                        "Boards retrieved from https://api.trello.com/1/members/me/boards missing "
+                            + "required properties"
                     );
                 }
             }
@@ -166,8 +169,9 @@ namespace GoldenSyrupGames.T2MD
             var boardTasks = new List<Task>();
             foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards)
             {
-                // Starting each board with Task.Run is consistently faster than just async/await within the board, even though it's I/O bound.
-                // Probably because the JSON parsing is CPU bound and it's doing enough of it per board.
+                // Starting each board with Task.Run is consistently faster than just async/await
+                // within the board, even though it's I/O bound. Probably because the JSON parsing
+                // is CPU bound and it's doing enough of it per board.
                 boardTasks.Add(Task.Run(() => ProcessTrelloBoardAsync(trelloApiBoard, options)));
             }
             await Task.WhenAll(boardTasks).ConfigureAwait(false);
@@ -176,8 +180,10 @@ namespace GoldenSyrupGames.T2MD
         /// <summary>
         /// The per-board code.
         /// </summary>
-        /// <param name="trelloApiBoard">Model of the board generated from the API call that enumerates them, not the downloaded json</param>
-        /// <param name="options">The parsed options we received on the commandline from the user</param>
+        /// <param name="trelloApiBoard">Model of the board generated from the API call that
+        /// enumerates them, not the downloaded json</param>
+        /// <param name="options">The parsed options we received on the commandline from the
+        /// user</param>
         /// <returns></returns>
         private static async Task ProcessTrelloBoardAsync(
             TrelloApiBoardModel trelloApiBoard,
@@ -192,10 +198,13 @@ namespace GoldenSyrupGames.T2MD
 
             AnsiConsole.MarkupLine($"    [blue]Starting {trelloApiBoard.Name}[/]");
 
-            // retrieve the full backup of each, the same as "Menu > more > print and export > JSON" in the web UI.
-            // the backup URL is just the board with .json: https://trello.com/b/<boardID>.json
-            // this grabs everything without having to specify everything we want via the API, which may change on us in the future.
-            // also as a quick check the (formatted) output of this has more lines than the output of trello-backup.php for the same board.
+            // - retrieve the full backup of each, the same as "Menu > more > print and export >
+            //   JSON" in the web UI.
+            // - the backup URL is just the board with .json: https://trello.com/b/<boardID>.json
+            // - this grabs everything without having to specify everything we want via the API,
+            //   which may change on us in the future.
+            // - also as a quick check the (formatted) output of this has more lines than the output
+            //   of trello-backup.php for the same board.
             var backupUrl = $"https://trello.com/b/{trelloApiBoard.ShortLink}.json";
             using var request = new HttpRequestMessage(HttpMethod.Get, backupUrl);
             // don't auth with parameters, authorize with the weird header like the S3 requests:
@@ -264,10 +273,12 @@ namespace GoldenSyrupGames.T2MD
                 );
             }
 
-            // sort the cards by their position in their list so we order by list order.
-            // we don't care about cross-list position, just the position relative to other cards in the list.
-            // fun fact: Trello doesn't use contiguous ints for their position: they use large-ranging floats so that
-            // card positions can be updated without recalculating all.
+            // - sort the cards by their position in their list so we order by list order.
+            // - we don't care about cross-list position, just the position relative to other cards
+            //   in the list.
+            // - fun fact: Trello doesn't use contiguous ints for their position: they use
+            //   large-ranging floats so that card positions can be updated without recalculating
+            //   all.
             IOrderedEnumerable<TrelloCardModel> orderedCards = trelloBoard.Cards.OrderBy(
                 card => card.Pos
             );
@@ -281,7 +292,8 @@ namespace GoldenSyrupGames.T2MD
                     .First();
 
                 // give the card the right index and path depending on whether it's archived or not.
-                // outside the function because they're all running in parallel and would read the wrong index
+                // outside the function because they're all running in parallel and would read the
+                // wrong index
                 int cardIndex = 0;
                 string listPath = "";
                 if (trelloCard.Closed)
@@ -316,15 +328,19 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
-        /// Creates a numbered folder for the list in the right subdirectory (based on whether it's archived or not) and records the path in its model object.
-        /// Updates the list index to be passed to the next index.
-        /// No async because windows doesn't have an async CreateDirectory.
+        /// Creates a numbered folder for the list in the right subdirectory (based on whether it's
+        /// archived or not) and records the path in its model object. <para/>
+        /// Updates the list index to be passed to the next index. <para/>
+        /// No async because windows doesn't have an async CreateDirectory. <para/>
         /// </summary>
         /// <param name="trelloList">The model of the list parsed from the json backup</param>
-        /// <param name="archivedListPath">the full path to the outer folder for archived lists</param>
-        /// <param name="boardPath">the full path to the folder for this board, where non-archived lists are stored</param>
+        /// <param name="archivedListPath">the full path to the outer folder for archived
+        /// lists</param>
+        /// <param name="boardPath">the full path to the folder for this board, where non-archived
+        /// lists are stored</param>
         /// <param name="archivedListIndex">index to use for this board if it's archived</param>
-        /// <param name="nonArchivedListIndex">index to use for this board if it's not archived</param>
+        /// <param name="nonArchivedListIndex">index to use for this board if it's not
+        /// archived</param>
         private static void ProcessTrelloList(
             TrelloListModel trelloList,
             string archivedListPath,
@@ -368,16 +384,21 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
-        /// Creates a markdown file each for the board's description, comments, checklists and list of attachments.
-        /// Downloads all attachments.
-        /// Replaces references to the attachment URLs with the new relative ones in the description and comments.
+        /// Creates a markdown file each for the board's description, comments, checklists and list
+        /// of attachments. <para/>
+        /// Downloads all attachments. <para/>
+        /// Replaces references to the attachment URLs with the new relative ones in the description
+        /// and comments. <para/>
         /// </summary>
         /// <param name="trelloCard">The model of the card parsed from the json backup</param>
-        /// <param name="cardIndex">The order of this card in the list, depending on whether it's archived or not.
-        /// Archived and unarchived cards should have unique contiguous numbering.</param>
-        /// <param name="trelloBoard">The model of  the board parsed from the json backup.
-        /// Card features like lists and comments are actually stored all together at a board level.</param>
-        /// <param name="options">The parsed options we received on the commandline from the user</param>
+        /// <param name="cardIndex">The order of this card in the list, depending on whether it's
+        /// archived or not. Archived and unarchived cards should have unique contiguous
+        /// numbering.</param>
+        /// <param name="trelloBoard">The model of  the board parsed from the json backup. Card
+        /// features like lists and comments are actually stored all together at a board
+        /// level.</param>
+        /// <param name="options">The parsed options we received on the commandline from the
+        /// user</param>
         /// <returns></returns>
         private static async Task ProcessTrelloCardAsync(
             TrelloCardModel trelloCard,
@@ -387,7 +408,8 @@ namespace GoldenSyrupGames.T2MD
             CliOptions options
         )
         {
-            // restrict the maximum filename length for all files. Just via the title, not any suffix or prefix
+            // restrict the maximum filename length for all files. Just via the title, not any
+            // suffix or prefix
             int actualOrRestrictedLength = Math.Min(
                 trelloCard.Name.Length,
                 options.MaxCardFilenameTitleLength
@@ -415,7 +437,8 @@ namespace GoldenSyrupGames.T2MD
                 options
             );
 
-            // download uploaded attachments if there are any. Only direct file uploads or image data pastes, not e.g. pasted http links
+            // download uploaded attachments if there are any. Only direct file uploads or image
+            // data pastes, not e.g. pasted http links
             IEnumerable<TrelloAttachmentModel> uploadedAttachments = trelloCard.Attachments.Where(
                 attachment => attachment.IsUpload
             );
@@ -433,7 +456,8 @@ namespace GoldenSyrupGames.T2MD
                 );
             }
 
-            // save the path and contents of the description and comment files so we can find/replace URLs in them
+            // save the path and contents of the description and comment files so we can
+            // find/replace URLs in them
             (string commentsContents, string commentsPath) = await WriteCardCommentsAsync(
                 trelloCard,
                 trelloBoard,
@@ -445,7 +469,8 @@ namespace GoldenSyrupGames.T2MD
             (string descriptionContents, string descriptionPath) = await WriteCardDescriptionTask;
             await WriteCardChecklistsTask;
 
-            // replace full http attachment URLs with local relative paths so the description and comments now link to the downloaded copies.
+            // replace full http attachment URLs with local relative paths so the description and
+            // comments now link to the downloaded copies.
             await UpdateAttachmentReferencesAsync(
                 uploadedAttachments,
                 descriptionContents,
@@ -459,11 +484,16 @@ namespace GoldenSyrupGames.T2MD
         /// Write the card description to a markdown file.
         /// </summary>
         /// <param name="trelloCard">The model of the card parsed from the json backup</param>
-        /// <param name="cardFolderPath">The archived or non-archived folder items in this card write to.</param>
-        /// <param name="cardIndex">The order of this card in the list, depending on whether it's archived or not.</param>
-        /// <param name="usableCardName">The length-limited and usable version of the card title - special characters should be removed already.</param>
-        /// <param name="options">The parsed options we received on the commandline from the user</param>
-        /// <returns>Returns the markdown contents of the description in the first tuple member and the path to the description file in the second.</returns>
+        /// <param name="cardFolderPath">The archived or non-archived folder items in this card
+        /// write to.</param>
+        /// <param name="cardIndex">The order of this card in the list, depending on whether it's
+        /// archived or not.</param>
+        /// <param name="usableCardName">The length-limited and usable version of the card title -
+        /// special characters should be removed already.</param>
+        /// <param name="options">The parsed options we received on the commandline from the
+        /// user</param>
+        /// <returns>Returns the markdown contents of the description in the first tuple member and
+        /// the path to the description file in the second.</returns>
         private static async Task<(string, string)> WriteCardDescriptionAsync(
             TrelloCardModel trelloCard,
             string cardFolderPath,
@@ -487,12 +517,17 @@ namespace GoldenSyrupGames.T2MD
         /// Write the card checklists to a markdown file if the card has any.
         /// </summary>
         /// <param name="trelloCard">The model of the card parsed from the json backup</param>
-        /// <param name="trelloBoard">The model of  the board parsed from the json backup.
-        /// Card features like lists and comments are actually stored all together at a board level.</param>
-        /// <param name="cardFolderPath">The archived or non-archived folder items in this card write to.</param>
-        /// <param name="cardIndex">The order of this card in the list, depending on whether it's archived or not.</param>
-        /// <param name="usableCardName">The length-limited and usable version of the card title - special characters should be removed already.</param>
-        /// <param name="options">The parsed options we received on the commandline from the user</param>
+        /// <param name="trelloBoard">The model of  the board parsed from the json backup. Card
+        /// features like lists and comments are actually stored all together at a board
+        /// level.</param>
+        /// <param name="cardFolderPath">The archived or non-archived folder items in this card
+        /// write to.</param>
+        /// <param name="cardIndex">The order of this card in the list, depending on whether it's
+        /// archived or not.</param>
+        /// <param name="usableCardName">The length-limited and usable version of the card title -
+        /// special characters should be removed already.</param>
+        /// <param name="options">The parsed options we received on the commandline from the
+        /// user</param>
         /// <returns></returns>
         private static async Task WriteCardChecklistsAsync(
             TrelloCardModel trelloCard,
@@ -539,13 +574,19 @@ namespace GoldenSyrupGames.T2MD
         /// Write the card comments to a markdown file if the card has any.
         /// </summary>
         /// <param name="trelloCard">The model of the card parsed from the json backup</param>
-        /// <param name="trelloBoard">The model of  the board parsed from the json backup.
-        /// Card features like lists and comments are actually stored all together at a board level.</param>
-        /// <param name="cardFolderPath">The archived or non-archived folder items in this card write to.</param>
-        /// <param name="cardIndex">The order of this card in the list, depending on whether it's archived or not.</param>
-        /// <param name="usableCardName">The length-limited and usable version of the card title - special characters should be removed already.</param>
-        /// <param name="options">The parsed options we received on the commandline from the user</param>
-        /// <returns>Returns the markdown contents of the comments file in the first tuple member and the path to it in the second.</returns>
+        /// <param name="trelloBoard">The model of  the board parsed from the json backup. Card
+        /// features like lists and comments are actually stored all together at a board
+        /// level.</param>
+        /// <param name="cardFolderPath">The archived or non-archived folder items in this card
+        /// write to.</param>
+        /// <param name="cardIndex">The order of this card in the list, depending on whether it's
+        /// archived or not.</param>
+        /// <param name="usableCardName">The length-limited and usable version of the card title -
+        /// special characters should be removed already.</param>
+        /// <param name="options">The parsed options we received on the commandline from the
+        /// user</param>
+        /// <returns>Returns the markdown contents of the comments file in the first tuple member
+        /// and the path to it in the second.</returns>
         private static async Task<(string, string)> WriteCardCommentsAsync(
             TrelloCardModel trelloCard,
             TrelloBoardModel trelloBoard,
@@ -574,7 +615,8 @@ namespace GoldenSyrupGames.T2MD
                 {
                     // separate each card's contents
                     commentsContents += "## " + new string('-', 40) + "\n\n";
-                    //commentsContents += "## " + new string('-', 10) + $"Comment on {trelloComment.Date}" + new string('-', 10) + "\n\n";
+                    //commentsContents += "## " + new string('-', 10) + $"Comment on
+                    //{trelloComment.Date}" + new string('-', 10) + "\n\n";
 
                     commentsContents += trelloComment.Data.Text;
                     commentsContents += "\n\n";
@@ -592,14 +634,21 @@ namespace GoldenSyrupGames.T2MD
         /// <summary>
         /// Download attachments for this card if there are any.
         /// </summary>
-        /// <param name="uploadedAttachments">The models of the attachments for this card parsed from the json backup.</param>
+        /// <param name="uploadedAttachments">The models of the attachments for this card parsed
+        /// from the json backup.</param>
         /// <param name="trelloCard">The model of the card parsed from the json backup</param>
-        /// <param name="cardIndex">The order of this card in the list, depending on whether it's archived or not.</param>
-        /// <param name="usableCardName">The length-limited and usable version of the card title - special characters should be removed already.</param>
-        /// <param name="cardFolderPath">The archived or non-archived folder items in this card write to.</param>
-        /// <param name="ignoreFailedAttachmentDownloads">If specified, print a warning when an exception is encountered instead of propagating.</param>
-        /// <param name="alwaysUseForwardSlashes">If specified, replace back slashes in paths with forward slashes.</param>
-        /// <param name="boardName">The name of the board this attachment is in a card under, for logging.</param>
+        /// <param name="cardIndex">The order of this card in the list, depending on whether it's
+        /// archived or not.</param>
+        /// <param name="usableCardName">The length-limited and usable version of the card title -
+        /// special characters should be removed already.</param>
+        /// <param name="cardFolderPath">The archived or non-archived folder items in this card
+        /// write to.</param>
+        /// <param name="ignoreFailedAttachmentDownloads">If specified, print a warning when an
+        /// exception is encountered instead of propagating.</param>
+        /// <param name="alwaysUseForwardSlashes">If specified, replace back slashes in paths with
+        /// forward slashes.</param>
+        /// <param name="boardName">The name of the board this attachment is in a card under, for
+        /// logging.</param>
         /// <returns></returns>
         private static async Task DownloadTrelloCardAttachmentsAsync(
             IEnumerable<TrelloAttachmentModel> uploadedAttachments,
@@ -659,13 +708,20 @@ namespace GoldenSyrupGames.T2MD
         /// <summary>
         /// Download a single attachment.
         /// </summary>
-        /// <param name="attachment">The models of the attachment parsed from the json backup.</param>
-        /// <param name="attachmentFolderPath">The folder we save attachments into for this card.</param>
-        /// <param name="cardFolderPath">The archived or non-archived folder items in this card write to.</param>
-        /// <param name="IgnoreFailedAttachmentDownloads">If specified, print a warning when an exception is encountered instead of propagating.</param>
-        /// <param name="alwaysUseForwardSlashes">If specified, replace back slashes in paths with forward slashes.</param>
-        /// <param name="boardName">The name of the board this attachment is in a card under, for logging.</param>
-        /// <param name="cardName">The name of the card this attachment is attached to, for logging.</returns>
+        /// <param name="attachment">The models of the attachment parsed from the json
+        /// backup.</param>
+        /// <param name="attachmentFolderPath">The folder we save attachments into for this
+        /// card.</param>
+        /// <param name="cardFolderPath">The archived or non-archived folder items in this card
+        /// write to.</param>
+        /// <param name="IgnoreFailedAttachmentDownloads">If specified, print a warning when an
+        /// exception is encountered instead of propagating.</param>
+        /// <param name="alwaysUseForwardSlashes">If specified, replace back slashes in paths with
+        /// forward slashes.</param>
+        /// <param name="boardName">The name of the board this attachment is in a card under, for
+        /// logging.</param>
+        /// <param name="cardName">The name of the card this attachment is attached to, for
+        /// logging.</returns>
         public static async Task<string> DownloadTrelloCardAttachmentAsync(
             TrelloAttachmentModel attachment,
             string attachmentFolderPath,
@@ -707,8 +763,8 @@ namespace GoldenSyrupGames.T2MD
                     .CopyToAsync(attachmentFileStream)
                     .ConfigureAwait(false);
 
-                // calculate the new URL, from where the markdown files will be to the attachment file.
-                // Markdown supports local relative paths
+                // calculate the new URL, from where the markdown files will be to the attachment
+                // file. Markdown supports local relative paths
                 string relativeAttachmentPath =
                     ".\\" + Path.GetRelativePath(cardFolderPath, attachmentPath);
                 // prepare the line to add to the file
@@ -729,7 +785,9 @@ namespace GoldenSyrupGames.T2MD
                 attachment.RelativeAttachmentPathSpacesReplaced =
                     relativeAttachmentPathSpacesReplaced;
 
-                return $"{attachment.ID} | {attachment.FileName} | [{relativeAttachmentPath}]({relativeAttachmentPathSpacesReplaced})";
+                return $"{attachment.ID} | "
+                    + $"{attachment.FileName} | "
+                    + $"[{relativeAttachmentPath}]({relativeAttachmentPathSpacesReplaced})";
             }
             catch (Exception exception)
             {
@@ -737,7 +795,8 @@ namespace GoldenSyrupGames.T2MD
                 {
                     // print a warning instead
                     AnsiConsole.MarkupLine(
-                        $"[yellow]Failed to download attachment {attachment.FileName} from {attachment.Url}"
+                        $"[yellow]Failed to download attachment {attachment.FileName} "
+                            + $"from {attachment.Url}"
                             + $"    Board: \"{boardName}\""
                             + $"    Card: {cardName}"
                             +
@@ -749,19 +808,25 @@ namespace GoldenSyrupGames.T2MD
                 }
                 else
                 {
-                    // this is the proper way to rethrow the exception - you don't need to specify the caught one
+                    // this is the proper way to rethrow the exception - you don't need to specify
+                    // the caught one
                     throw;
                 }
             }
         }
 
         /// <summary>
-        /// Replace references to attachment URLs with relative local paths in a card's description and comment files.
+        /// Replace references to attachment URLs with relative local paths in a card's description
+        /// and comment files.
         /// </summary>
-        /// <param name="uploadedAttachments">The models of the attachments for this card parsed from the json backup.</param>
-        /// <param name="descriptionContents">Original contents of the markdown file for the description.</param>
-        /// <param name="descriptionPath">Full path on disk to the description markdown file.</param>
-        /// <param name="commentsContents">Original contents of the markdown file for the comments.</param>
+        /// <param name="uploadedAttachments">The models of the attachments for this card parsed
+        /// from the json backup.</param>
+        /// <param name="descriptionContents">Original contents of the markdown file for the
+        /// description.</param>
+        /// <param name="descriptionPath">Full path on disk to the description markdown
+        /// file.</param>
+        /// <param name="commentsContents">Original contents of the markdown file for the
+        /// comments.</param>
         /// <param name="commentsPath">Full path on disk to the comments markdown file.</param>
         /// <returns></returns>
         private static async Task UpdateAttachmentReferencesAsync(
@@ -780,13 +845,15 @@ namespace GoldenSyrupGames.T2MD
 
             if (uploadedAttachments.Count() > 0)
             {
-                // we're going to and replace and URL references. Do it in a new variable so we can check if we made any changes
+                // we're going to and replace and URL references. Do it in a new variable so we can
+                // check if we made any changes
                 string replacedDescriptionContents = descriptionContents;
                 string replacedCommentsContents = commentsContents;
 
                 foreach (TrelloAttachmentModel attachment in uploadedAttachments)
                 {
-                    // find and replace attachment URLs in descriptions and comments with the new relative URLs
+                    // find and replace attachment URLs in descriptions and comments with the new
+                    // relative URLs
                     replacedDescriptionContents = replacedDescriptionContents.Replace(
                         attachment.Url,
                         attachment.RelativeAttachmentPathSpacesReplaced

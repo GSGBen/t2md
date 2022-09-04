@@ -13,6 +13,7 @@ namespace GoldenSyrupGames.T2MD
     {
         /// <summary>
         /// Retrieves Json from a web API URL and converts it to a JsonDocument class for reading.
+        /// <para />
         /// Raises an exception if unsuccessful.
         /// </summary>
         /// <exception cref="EnsureSuccessStatusCode "></exception>
@@ -34,7 +35,8 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
-        /// Retrieves Json from a web API HttpRequestMessage (URL and other options) and converts it to a JsonDocument class for reading
+        /// Retrieves Json from a web API HttpRequestMessage (URL and other options) and converts it
+        /// to a JsonDocument class for reading <para />
         /// Raises an exception if unsuccessful.
         /// </summary>
         /// <exception cref="EnsureSuccessStatusCode "></exception>
@@ -55,7 +57,7 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
-        /// Retrieves text from a web API URL response
+        /// Retrieves text from a web API URL response <para />
         /// Raises an exception if unsuccessful.
         /// </summary>
         /// <exception cref="EnsureSuccessStatusCode "></exception>
@@ -74,7 +76,7 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
-        /// Retrieves text from a web API URL response
+        /// Retrieves text from a web API URL response <para />
         /// Raises an exception if unsuccessful.
         /// </summary>
         /// <exception cref="EnsureSuccessStatusCode "></exception>
@@ -98,11 +100,11 @@ namespace GoldenSyrupGames.T2MD
     public static class FileSystem
     {
         /// <summary>
-        /// Hopefully a fix for folder-in-use errors when deleting within Dropbox.
-        /// Depth-first recursive delete, with handling for descendant
-        /// directories open in Windows Explorer.
-        /// Modified from https://stackoverflow.com/a/1703799.
-        /// WARNING: runs recursively so can worst-case delay for total folders * retries * delay, but this is unlikely.
+        /// Hopefully a fix for folder-in-use errors when deleting within Dropbox. <para />
+        /// Depth-first recursive delete, with handling for descendant directories open in Windows
+        /// Explorer. Modified from https://stackoverflow.com/a/1703799. <para />
+        /// WARNING: runs recursively so can worst-case delay for total folders * retries * delay,
+        /// but this is unlikely. <para />
         /// </summary>
         public static void DeleteDirectoryRecursivelyWithRetriesAndDelay(
             string path,
@@ -153,7 +155,8 @@ namespace GoldenSyrupGames.T2MD
         /// <summary>
         /// Returns FolderOrFileName with any unsafe path characters replaced with _.
         /// </summary>
-        /// <param name="FolderOrFileName">The folder or file name with potentially unsafe characters</param>
+        /// <param name="FolderOrFileName">The folder or file name with potentially unsafe
+        /// characters</param>
         /// <returns></returns>
         public static string SanitiseForPath(string FolderOrFileName)
         {

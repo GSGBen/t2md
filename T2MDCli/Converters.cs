@@ -39,7 +39,8 @@ namespace GoldenSyrupGames.T2MD
                 else
                 {
                     throw new System.Text.Json.JsonException(
-                        $"Couldn't parse the string `{stringValue}` as a double or as one of Trello's positions"
+                        $"Couldn't parse the string `{stringValue}` as a double or as one of "
+                            + $"Trello's positions"
                     );
                 }
             }
@@ -63,7 +64,7 @@ namespace GoldenSyrupGames.T2MD
     }
 
     /// <summary>
-    /// One user had a description of "true" that was stored in json as a boolean true.
+    /// One user had a description of "true" that was stored in json as a boolean true. <para />
     /// Handle all weird string conversions
     /// </summary>
     public class TrelloStringJsonConverter : JsonConverter<String>

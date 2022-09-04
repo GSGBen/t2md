@@ -7,14 +7,16 @@ using System.Threading.Tasks;
 namespace GoldenSyrupGames.T2MD
 {
     /// <summary>
-    /// Partial model of the API response to /board (maybe?) to deserialize json to. We only use this as listed in the response to /members/me/boards.
+    /// Partial model of the API response to /board (maybe?) to deserialize json to. We only use
+    /// this as listed in the response to /members/me/boards.
     /// </summary>
     public class TrelloApiBoardModel
     {
         public string Name { get; set; } = "";
         public string ShortLink { get; set; } = "";
 
-        // workaround for no Required attribute. Returns true if we have data in fields that should always have data
+        // workaround for no Required attribute. Returns true if we have data in fields that should
+        // always have data
         public bool AreAllRequiredFieldsFilled()
         {
             if (string.IsNullOrEmpty(Name) || string.IsNullOrEmpty(ShortLink))
@@ -27,7 +29,8 @@ namespace GoldenSyrupGames.T2MD
     }
 
     /// <summary>
-    /// Partial model of the json from backing up a Trello board (via the web UI, not via the API. E.g. trello.com/b/<id>.json
+    /// Partial model of the json from backing up a Trello board (via the web UI, not via the API.
+    /// E.g. trello.com/b/[id].json
     /// </summary>
     public class TrelloBoardModel
     {
@@ -39,7 +42,8 @@ namespace GoldenSyrupGames.T2MD
             new List<TrelloChecklistModel>();
         public List<TrelloActionModel> Actions { get; set; } = new List<TrelloActionModel>();
 
-        // workaround for no Required attribute. Returns true if we have data in fields that should always have data
+        // workaround for no Required attribute. Returns true if we have data in fields that should
+        // always have data
         public bool AreAllRequiredFieldsFilled()
         {
             if (string.IsNullOrEmpty(Name) || string.IsNullOrEmpty(ShortLink))
@@ -52,7 +56,8 @@ namespace GoldenSyrupGames.T2MD
     }
 
     /// <summary>
-    /// Partial model of lists forming part of TrelloBoardModel, + some extra properties we store results in.
+    /// Partial model of lists forming part of TrelloBoardModel, + some extra properties we store
+    /// results in.
     /// </summary>
     public class TrelloListModel
     {
@@ -70,7 +75,8 @@ namespace GoldenSyrupGames.T2MD
         public string ArchiveFolderPath { get; set; } = "";
 
         /// <summary>
-        /// as we process each non-archived card the number we're up to is recorded here, so we can have per-list card counts and ordering
+        /// as we process each non-archived card the number we're up to is recorded here, so we can
+        /// have per-list card counts and ordering
         /// </summary>
         public int NonArchivedCardIndex { get; set; } = 0;
 
@@ -89,7 +95,8 @@ namespace GoldenSyrupGames.T2MD
         /// </summary>
         public double Pos { get; set; } = 0.0;
 
-        // workaround for no Required attribute. Returns true if we have data in fields that should always have data
+        // workaround for no Required attribute. Returns true if we have data in fields that should
+        // always have data
         public bool AreAllRequiredFieldsFilled()
         {
             if (string.IsNullOrEmpty(Name) || string.IsNullOrEmpty(ID))
@@ -136,7 +143,8 @@ namespace GoldenSyrupGames.T2MD
         public List<TrelloAttachmentModel> Attachments { get; set; } =
             new List<TrelloAttachmentModel>();
 
-        // workaround for no Required attribute. Returns true if we have data in fields that should always have data
+        // workaround for no Required attribute. Returns true if we have data in fields that should
+        // always have data
         public bool AreAllRequiredFieldsFilled()
         {
             if (
@@ -176,7 +184,8 @@ namespace GoldenSyrupGames.T2MD
         public List<TrelloCheckItemModel> CheckItems { get; set; } =
             new List<TrelloCheckItemModel>();
 
-        // workaround for no Required attribute. Returns true if we have data in fields that should always have data
+        // workaround for no Required attribute. Returns true if we have data in fields that should
+        // always have data
         public bool AreAllRequiredFieldsFilled()
         {
             if (
@@ -215,7 +224,8 @@ namespace GoldenSyrupGames.T2MD
         /// </summary>
         public string State { get; set; } = "";
 
-        // workaround for no Required attribute. Returns true if we have data in fields that should always have data
+        // workaround for no Required attribute. Returns true if we have data in fields that should
+        // always have data
         public bool AreAllRequiredFieldsFilled()
         {
             if (
@@ -249,7 +259,8 @@ namespace GoldenSyrupGames.T2MD
         public string Date { get; set; } = "";
         public TrelloActionDataModel Data { get; set; } = new TrelloActionDataModel();
 
-        // workaround for no Required attribute. Returns true if we have data in fields that should always have data
+        // workaround for no Required attribute. Returns true if we have data in fields that should
+        // always have data
         public bool AreAllRequiredFieldsFilled()
         {
             if (
@@ -283,7 +294,8 @@ namespace GoldenSyrupGames.T2MD
     }
 
     /// <summary>
-    /// partial model of a card's attachment forming part of TrelloBoardModel, + some extra properties we store results in.
+    /// partial model of a card's attachment forming part of TrelloBoardModel, + some extra
+    /// properties we store results in.
     /// </summary>
     public class TrelloAttachmentModel
     {
@@ -294,12 +306,15 @@ namespace GoldenSyrupGames.T2MD
         public string FileName { get; set; } = "";
 
         /// <summary>
-        /// The path that we save the attachment to if we download it, relative to the description etc files.
-        /// This is so we can download them all in one awaited go, record the relative paths here, then find+replace later.
+        /// The path that we save the attachment to if we download it, relative to the description
+        /// etc files. <para />
+        /// This is so we can download them all in one awaited go, record the relative paths here,
+        /// then find+replace later.
         /// </summary>
         public string RelativeAttachmentPathSpacesReplaced { get; set; } = "";
 
-        // workaround for no Required attribute. Returns true if we have data in fields that should always have data
+        // workaround for no Required attribute. Returns true if we have data in fields that should
+        // always have data
         public bool AreAllRequiredFieldsFilled()
         {
             if (string.IsNullOrEmpty(Name) || string.IsNullOrEmpty(Url) || string.IsNullOrEmpty(ID))
