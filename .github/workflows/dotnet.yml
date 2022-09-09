@@ -1,5 +1,7 @@
 name: test
 
+# note that a merged pull request results in a push to master so this workflow will run
+# twice in that case. Leaving for now
 on:
   push:
     branches: [ "main" ]
@@ -7,20 +9,97 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # run tests for all pushes and pull requests
   build-test:
-
     runs-on: ubuntu-latest
-
     steps:
-    - name: Retrieve code
-      uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
-    - name: Set up .NET
-      uses: actions/setup-dotnet@v2
-      with:
-        dotnet-version: 6.0.x
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test T2MDCliTests/
+      - name: Retrieve code
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+      - name: Test
+        run: dotnet test T2MDCliTests/
+
+  publish:
+    runs-on: ubuntu-latest
+    # only publish if I've merged a pull request or pushed directly to master
+    if: github.event.pull_request.merged == true || github.event_name == 'push'
+    # require successful tests
+    needs:
+      build-test
+    steps:
+      - name: publish windows
+        run: |
+          dotnet publish \
+            --configuration Release \
+             --runtime win-x64 \
+             --self-contained true \
+             -p:PublishReadyToRun=true \
+             -p:PublishSingleFile=true \
+             --output output/win-64 \
+             T2MDCli
+      
+      - name: publish linux
+        run: |
+          dotnet publish \
+            --configuration Release \
+             --runtime linux-x64 \
+             --self-contained true \
+             -p:PublishReadyToRun=true \
+             -p:PublishSingleFile=true \
+             --output output/linux-64 \
+             T2MDCli
+      
+      - name: publish mac
+        run: |
+          dotnet publish \
+            --configuration Release \
+             --runtime osx-x64 \
+             --self-contained true \
+             -p:PublishReadyToRun=true \
+             -p:PublishSingleFile=true \
+             --output output/osx-64 \
+             T2MDCli
+      
+      - name: zip windows
+        run:
+          zip output/t2md-win-x64.zip output/win-x64/t2md.exe
+      
+      - name: zip linux
+        run:
+          zip output/t2md-linux-x64.zip output/linux-x64/t2md
+      
+      - name: zip mac
+        run:
+          zip output/t2md-macos-x64.zip output/osx-x64/t2md
+      
+      - name: upload windows
+        uses: actions/upload-artifact@v3
+        with:
+          name: t2md-win-x64.zip
+          path: output/t2md-win-x64.zip
+      
+      - name: upload linux
+        uses: actions/upload-artifact@v3
+        with:
+          name: t2md-linux-x64.zip
+          path: output/t2md-linux-x64.zip
+
+      - name: upload mac
+        uses: actions/upload-artifact@v3
+        with:
+          name: t2md-macos-x64.zip
+          path: output/t2md-macos-x64.zip
+
+
+
