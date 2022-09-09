@@ -18,7 +18,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: test
-        run: echo "PR code"
+        env:
+          TEST_SECRET: ${{ secrets.TEST_SECRET }}
+        shell: bash
+        run: |
+          echo "secret: $TEST_SECRET"
+      
       - name: Retrieve code
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
 
