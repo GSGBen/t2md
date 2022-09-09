@@ -54,7 +54,7 @@ jobs:
              --self-contained true \
              -p:PublishReadyToRun=true \
              -p:PublishSingleFile=true \
-             --output output/win-64 \
+             --output output/win-x64 \
              T2MDCli
       
       - name: publish linux
@@ -65,7 +65,7 @@ jobs:
              --self-contained true \
              -p:PublishReadyToRun=true \
              -p:PublishSingleFile=true \
-             --output output/linux-64 \
+             --output output/linux-x64 \
              T2MDCli
       
       - name: publish mac
@@ -79,12 +79,6 @@ jobs:
              --output output/osx-64 \
              T2MDCli
       
-      - name: debug
-        run: pwd && ls output -R
-
-      - name: debug
-        run: tree
-
       - name: zip windows
         run:
           zip output/t2md-win-x64.zip output/win-x64/t2md.exe
