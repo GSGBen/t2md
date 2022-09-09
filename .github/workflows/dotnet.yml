@@ -112,7 +112,7 @@ jobs:
   draft-release:
     runs-on: ubuntu-latest
     needs:
-      draft-release
+      publish
     steps:
     # download all created artifacts above (the .zip files)
     - uses: actions/download-artifact@v3
