@@ -76,7 +76,7 @@ jobs:
              --self-contained true \
              -p:PublishReadyToRun=true \
              -p:PublishSingleFile=true \
-             --output output/osx-64 \
+             --output output/osx-x64 \
              T2MDCli
       
       - name: zip windows
