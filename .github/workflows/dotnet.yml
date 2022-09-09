@@ -124,6 +124,7 @@ jobs:
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         draft: true
+        prerelease: false
         automatic_release_tag: "latest"
         # globs are broken at the moment, specify directly
         files: |
