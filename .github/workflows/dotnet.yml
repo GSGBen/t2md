@@ -1,4 +1,4 @@
-name: test
+name: build - test - publish
 
 # note that a merged pull request results in a push to master so this workflow will run
 # twice in that case. Leaving for now

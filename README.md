@@ -1,4 +1,7 @@
+
 # Trello to Markdown
+
+![pipeline status](https://github.com/GSGBen/t2md/actions/workflows/dotnet.yml/badge.svg)
 
 `t2md` backs ups the full .json export of your Trello boards and all uploaded (not linked) attachments, then creates local markdown files for each card's description, checklists, comments and attachments for easy viewing. Any references to uploaded attachments in the description and comments are replaced with local relative paths so they continue to display. 
 
