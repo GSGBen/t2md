@@ -79,6 +79,12 @@ jobs:
              --output output/osx-64 \
              T2MDCli
       
+      - name: debug
+        run: pwd && ls output -R
+
+      - name: debug
+        run: tree
+
       - name: zip windows
         run:
           zip output/t2md-win-x64.zip output/win-x64/t2md.exe
