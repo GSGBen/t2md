@@ -4,17 +4,21 @@ name: build - test
 # twice in that case. Leaving for now
 on:
   push:
-    branches: [ "main" ]
+    branches: ["*"]
   # this should run in the forker's context, not ours.
   # pull_request_target is the one with dangerous security
   pull_request:
-    branches: [ "main" ]
+    branches: ["*"]
+  pull_request_target:
+    branches: ["*"]
 
 jobs:
   # run tests for all pushes and pull requests
   build-test:
     runs-on: ubuntu-latest
     steps:
+      - name: test
+        run: echo "PR code"
       - name: Retrieve code
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
 
@@ -31,3 +35,15 @@ jobs:
 
       - name: Test
         run: dotnet test T2MDCliTests/
+        
+      - uses: "marvinpinto/action-automatic-releases@919008cf3f741b179569b7a6fb4d8860689ab7f0"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          draft: true
+          prerelease: false
+          automatic_release_tag: "pr-test"
+          # globs are broken at the moment, specify directly
+          files: |
+            t2md-win-x64.zip
+            t2md-linux-x64.zip
+            t2md-macos-x64.zip
