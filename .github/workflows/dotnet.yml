@@ -38,6 +38,14 @@ jobs:
     needs:
       build-test
     steps:
+      - name: Retrieve code
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: 6.0.x
+
       - name: publish windows
         run: |
           dotnet publish \
