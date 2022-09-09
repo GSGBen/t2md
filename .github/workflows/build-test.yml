@@ -24,6 +24,29 @@ jobs:
         run: |
           echo "secret: $TEST_SECRET. Owner: $GITHUB_REPOSITORY"
       
+      - name: test2
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api /octocat
+          gh api -H "Accept: application/vnd.github+json" /user
+          
+      - name: test3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/GSGBen/t2md/releases \
+            -f tag_name='v5.0.0' \
+            -f target_commitish='main' \
+            -f name='v5.0.0' \
+            -f body='test' \
+            -F draft=true \
+            -F prerelease=false \
+            -F generate_release_notes=false 
+          
       - name: Retrieve code
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
 
