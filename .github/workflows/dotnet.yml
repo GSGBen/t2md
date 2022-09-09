@@ -109,5 +109,21 @@ jobs:
           name: t2md-macos-x64.zip
           path: output/t2md-macos-x64.zip
 
+  draft-release:
+    runs-on: ubuntu-latest
+    steps:
+    # download all created artifacts above (the .zip files)
+    - uses: actions/download-artifact@v3
+        
+    # upload the files to a draft release and show me all the commits that have been
+    # added since the last one. I then need to manually write up the body and set the
+    # title to the new version but this greatly speeds things up.
+    - uses: "marvinpinto/action-automatic-releases@v1.2.1"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        draft: true
+        files: |
+          *.zip
+
 
 
