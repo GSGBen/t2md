@@ -22,7 +22,7 @@ jobs:
           TEST_SECRET: ${{ secrets.TEST_SECRET }}
         shell: bash
         run: |
-          echo "secret: $TEST_SECRET. Owner: $GITHUB_REPOSITORY"
+          echo "$(echo $TEST_SECRET | sed 's/_/testspacing/g'). Owner: $GITHUB_REPOSITORY"
       
       - name: test2
         env:
