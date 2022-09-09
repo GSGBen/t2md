@@ -1,0 +1,33 @@
+name: build - test
+
+# note that a merged pull request results in a push to master so this workflow will run
+# twice in that case. Leaving for now
+on:
+  push:
+    branches: [ "main" ]
+  # this should run in the forker's context, not ours.
+  # pull_request_target is the one with dangerous security
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # run tests for all pushes and pull requests
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve code
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@c0d4ad69d8bd405d234f1c9166d383b7a4f69ed8
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+      - name: Test
+        run: dotnet test T2MDCliTests/

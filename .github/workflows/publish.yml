@@ -1,15 +1,15 @@
-name: build - test - publish
+name: publish
 
-# note that a merged pull request results in a push to master so this workflow will run
-# twice in that case. Leaving for now
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: 
+  workflow_dispatch:
+    inputs:
+      version:
+        description: version to tag and publish the draft with
+        required: true
+        default: vX.Y.Z
 
 jobs:
-  # run tests for all pushes and pull requests
+  # still require a passing test just in case
   build-test:
     runs-on: ubuntu-latest
     steps:
@@ -32,8 +32,6 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    # only publish if I've merged a pull request or pushed directly to master
-    if: github.event.pull_request.merged == true || github.event_name == 'push'
     # require successful tests
     needs:
       build-test
@@ -120,12 +118,12 @@ jobs:
     # upload the files to a draft release and show me all the commits that have been
     # added since the last one. I then need to manually write up the body and set the
     # title to the new version but this greatly speeds things up.
-    - uses: "marvinpinto/action-automatic-releases@v1.2.1"
+    - uses: "marvinpinto/action-automatic-releases@919008cf3f741b179569b7a6fb4d8860689ab7f0"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         draft: true
         prerelease: false
-        automatic_release_tag: "latest"
+        automatic_release_tag: "${{ github.event.inputs.version }}"
         # globs are broken at the moment, specify directly
         files: |
           t2md-win-x64.zip
