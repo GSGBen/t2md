@@ -125,8 +125,11 @@ jobs:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         draft: true
         automatic_release_tag: "latest"
+        # globs are broken at the moment, specify directly
         files: |
-          *.zip
+          t2md-win-x64.zip
+          t2md-linux-x64.zip
+          t2md-macos-x64.zip
 
 
 
