@@ -394,7 +394,7 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="cardIndex">The order of this card in the list, depending on whether it's
         /// archived or not. Archived and unarchived cards should have unique contiguous
         /// numbering.</param>
-        /// <param name="trelloBoard">The model of  the board parsed from the json backup. Card
+        /// <param name="trelloBoard">The model of the board parsed from the json backup. Card
         /// features like lists and comments are actually stored all together at a board
         /// level.</param>
         /// <param name="options">The parsed options we received on the commandline from the
@@ -456,6 +456,8 @@ namespace GoldenSyrupGames.T2MD
                 );
             }
 
+            List<TrelloActionModel> cardComments = await GetCardCommentsAsync(trelloCard.ID);
+
             // save the path and contents of the description and comment files so we can
             // find/replace URLs in them
             (string commentsContents, string commentsPath) = await WriteCardCommentsAsync(
@@ -464,7 +466,8 @@ namespace GoldenSyrupGames.T2MD
                 cardFolderPath,
                 cardIndex,
                 usableCardName,
-                options
+                options,
+                cardComments
             );
             (string descriptionContents, string descriptionPath) = await WriteCardDescriptionTask;
             await WriteCardChecklistsTask;
@@ -571,6 +574,34 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
+        /// Returns the commentCart action models for a card. <para />
+        /// Retrieves them from the API because the json export only contains the last 1000 actions.
+        /// </summary>
+        /// <param name="cardID">The ID of the card to retrieve comments for.</param>
+        /// <returns></returns>
+        private static async Task<List<TrelloActionModel>> GetCardCommentsAsync(string cardID)
+        {
+            // get all actions for this card, including comments
+            var url =
+                $"https://api.trello.com/1/cards/{cardID}/actions?key={_apiKey}&token={_apiToken}";
+            string textResponse = await _httpClient.GetStringAsync(url).ConfigureAwait(false);
+            var cardActions = new List<TrelloActionModel>();
+            cardActions = JsonSerializer.Deserialize<List<TrelloActionModel>>(
+                textResponse,
+                _jsonDeserializeOptions
+            );
+
+            // no actions = no comments
+            if (cardActions == null)
+            {
+                return new List<TrelloActionModel>();
+            }
+
+            // return comment actions only
+            return cardActions.Where(cardAction => cardAction.Type == "commentCard").ToList();
+        }
+
+        /// <summary>
         /// Write the card comments to a markdown file if the card has any.
         /// </summary>
         /// <param name="trelloCard">The model of the card parsed from the json backup</param>
@@ -585,6 +616,7 @@ namespace GoldenSyrupGames.T2MD
         /// special characters should be removed already.</param>
         /// <param name="options">The parsed options we received on the commandline from the
         /// user</param>
+        /// <param name="commentActions">The comments to write to the file.</param>
         /// <returns>Returns the markdown contents of the comments file in the first tuple member
         /// and the path to it in the second.</returns>
         private static async Task<(string, string)> WriteCardCommentsAsync(
@@ -593,16 +625,10 @@ namespace GoldenSyrupGames.T2MD
             string cardFolderPath,
             int cardIndex,
             string usableCardName,
-            CliOptions options
+            CliOptions options,
+            List<TrelloActionModel> cardComments
         )
         {
-            // comments are again under the board
-            IEnumerable<TrelloActionModel> cardComments = trelloBoard.Actions.Where(
-                action =>
-                {
-                    return action.Type == "commentCard" && action.Data.Card.ID == trelloCard.ID;
-                }
-            );
             if (cardComments.Count() > 0)
             {
                 // start with a modified title for the whole file
