@@ -581,10 +581,14 @@ namespace GoldenSyrupGames.T2MD
         /// <returns></returns>
         private static async Task<List<TrelloActionModel>> GetCardCommentsAsync(string cardID)
         {
-            // get all actions for this card, including comments
+            // get only comment actions for this card
             var url =
-                $"https://api.trello.com/1/cards/{cardID}/actions?key={_apiKey}&token={_apiToken}";
+                $"https://api.trello.com/1/cards/{cardID}/actions?"
+                + $"key={_apiKey}"
+                + $"&token={_apiToken}"
+                + $"&filter=commentCard";
             string textResponse = await _httpClient.GetStringAsync(url).ConfigureAwait(false);
+
             var cardActions = new List<TrelloActionModel>();
             cardActions = JsonSerializer.Deserialize<List<TrelloActionModel>>(
                 textResponse,
@@ -597,8 +601,8 @@ namespace GoldenSyrupGames.T2MD
                 return new List<TrelloActionModel>();
             }
 
-            // return comment actions only
-            return cardActions.Where(cardAction => cardAction.Type == "commentCard").ToList();
+            // already filtered via the api call
+            return cardActions.ToList();
         }
 
         /// <summary>
