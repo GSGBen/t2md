@@ -129,7 +129,14 @@ namespace GoldenSyrupGames.T2MD
             }
 
             // get a list of all boards
-            var url = $"https://api.trello.com/1/members/me/boards?key={_apiKey}&token={_apiToken}";
+            var url =
+                $"https://api.trello.com/1/members/me/boards?"
+                + $"key={_apiKey}"
+                + $"&token={_apiToken}"
+                // we can only grab 1000 at a time. After that we need to paginate. not paginating
+                // for boards. If I need to in the future, generalise the code from
+                // GetBoardCommentsAsync.
+                + $"&limit=1000";
             string textResponse = await _httpClient.GetStringAsync(url).ConfigureAwait(false);
             var trelloApiBoards = new List<TrelloApiBoardModel>();
             trelloApiBoards = JsonSerializer.Deserialize<List<TrelloApiBoardModel>>(
@@ -218,7 +225,12 @@ namespace GoldenSyrupGames.T2MD
                 .ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            // write the json to file (overwrite)
+            // get all board comments from the API because the json export only contains the last
+            // 1000 actions.
+            List<TrelloActionModel> boardComments = await GetBoardCommentsAsync(trelloApiBoard.ID);
+
+            // write the json to file (overwrite).
+            // without this linux will happily write /'s
             string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
             string boardOutputFilePath = Path.Combine(_outputPath, $"{usableBoardName}.json");
             using FileStream fileStream = File.Create(boardOutputFilePath);
@@ -227,8 +239,7 @@ namespace GoldenSyrupGames.T2MD
                 .ConfigureAwait(false);
             await contentStream.CopyToAsync(fileStream).ConfigureAwait(false);
 
-            // create a folder for each board.
-            // without this linux will happily write /'s
+            // create a folder for each board
             string boardPath = Path.Combine(_outputPath, usableBoardName);
             Directory.CreateDirectory(boardPath);
             // do the same for a subfolder for archived lists
@@ -309,7 +320,14 @@ namespace GoldenSyrupGames.T2MD
 
                 // run them in parallel
                 CardTasks.Add(
-                    ProcessTrelloCardAsync(trelloCard, cardIndex, listPath, trelloBoard, options)
+                    ProcessTrelloCardAsync(
+                        trelloCard,
+                        cardIndex,
+                        listPath,
+                        trelloBoard,
+                        options,
+                        boardComments
+                    )
                 );
 
                 // again outside the function because they're all running in parallel
@@ -325,6 +343,72 @@ namespace GoldenSyrupGames.T2MD
             await Task.WhenAll(CardTasks);
 
             AnsiConsole.MarkupLine($"    [green]Finished {trelloApiBoard.Name}[/]");
+        }
+
+        /// <summary>
+        /// Returns the commentCard action models for a board. <para />
+        /// Retrieves them from the API because the json export only contains the last 1000 actions.
+        /// <para />
+        /// Retrieves them per board not per card because an API call per card is way too slow.
+        /// </summary>
+        /// <param name="boardID">The ID of the board to retrieve comments for.</param>
+        /// <returns></returns>
+        private static async Task<List<TrelloActionModel>> GetBoardCommentsAsync(string boardID)
+        {
+            var boardComments = new List<TrelloActionModel>();
+
+            // page to get all results.
+            bool first = true;
+            while (true)
+            {
+                var url =
+                    $"https://api.trello.com/1/boards/{boardID}/actions?"
+                    + $"key={_apiKey}"
+                    + $"&token={_apiToken}"
+                    // get only comment actions for this board
+                    + $"&filter=commentCard"
+                    // we can only grab 1000 at a time. After that we need to paginate
+                    + $"&limit=1000";
+                // comments are sorted newest to oldest. The paging method is getting the date of
+                // the oldest comment and requesting the next x comments `before` that date. In the
+                // first loop we don't do this.
+                if (!first && boardComments.Count > 0)
+                {
+                    string pageDate = boardComments.Last().Date;
+                    url += $"&before={pageDate}";
+                }
+                string textResponse = await _httpClient.GetStringAsync(url).ConfigureAwait(false);
+
+                var result = JsonSerializer.Deserialize<List<TrelloActionModel>>(
+                    textResponse,
+                    _jsonDeserializeOptions
+                );
+
+                if (result == null)
+                {
+                    throw new Exception(
+                        $"Failed to parse comments from actions of board {boardID}"
+                    );
+                }
+
+                // empty array indicates there are no more results
+                if (result.Count == 0)
+                {
+                    break;
+                }
+
+                boardComments.AddRange(result);
+                first = false;
+            }
+
+            // no actions = no comments
+            if (boardComments == null)
+            {
+                return new List<TrelloActionModel>();
+            }
+
+            // already filtered via the api call, no need to `Where` filter again
+            return boardComments.ToList();
         }
 
         /// <summary>
@@ -387,8 +471,8 @@ namespace GoldenSyrupGames.T2MD
         /// Creates a markdown file each for the board's description, comments, checklists and list
         /// of attachments. <para/>
         /// Downloads all attachments. <para/>
-        /// Replaces references to the attachment URLs with the new relative ones in the description
-        /// and comments. <para/>
+        /// Replaces references to the attachment URLs with the new relative ones in the
+        /// description and comments. <para/>
         /// </summary>
         /// <param name="trelloCard">The model of the card parsed from the json backup</param>
         /// <param name="cardIndex">The order of this card in the list, depending on whether it's
@@ -399,13 +483,16 @@ namespace GoldenSyrupGames.T2MD
         /// level.</param>
         /// <param name="options">The parsed options we received on the commandline from the
         /// user</param>
+        /// <param name="boardActions">The list of all comments for the board so we can retrieve
+        /// ours.</param>
         /// <returns></returns>
         private static async Task ProcessTrelloCardAsync(
             TrelloCardModel trelloCard,
             int cardIndex,
             string cardFolderPath,
             TrelloBoardModel trelloBoard,
-            CliOptions options
+            CliOptions options,
+            List<TrelloActionModel> boardComments
         )
         {
             // restrict the maximum filename length for all files. Just via the title, not any
@@ -456,11 +543,13 @@ namespace GoldenSyrupGames.T2MD
                 );
             }
 
-            List<TrelloActionModel> cardComments = await GetCardCommentsAsync(trelloCard.ID);
+            // get only this card's comments
+            List<TrelloActionModel> cardComments = boardComments
+                .Where(action => action.Data.Card.ID == trelloCard.ID)
+                .ToList();
 
-            // save the path and contents of the description and comment files so we can
-            // find/replace URLs in them
-            (string commentsContents, string commentsPath) = await WriteCardCommentsAsync(
+            // write comments to a markdown file
+            Task<(string, string)> WriteCardCommentsTask = WriteCardCommentsAsync(
                 trelloCard,
                 trelloBoard,
                 cardFolderPath,
@@ -469,7 +558,11 @@ namespace GoldenSyrupGames.T2MD
                 options,
                 cardComments
             );
+
+            // save the path and contents of the description and comment files so we can
+            // find/replace URLs in them
             (string descriptionContents, string descriptionPath) = await WriteCardDescriptionTask;
+            (string commentsContents, string commentsPath) = await WriteCardCommentsTask;
             await WriteCardChecklistsTask;
 
             // replace full http attachment URLs with local relative paths so the description and
@@ -571,38 +664,6 @@ namespace GoldenSyrupGames.T2MD
                 await File.WriteAllTextAsync(checklistsPath, checklistsContents)
                     .ConfigureAwait(false);
             }
-        }
-
-        /// <summary>
-        /// Returns the commentCart action models for a card. <para />
-        /// Retrieves them from the API because the json export only contains the last 1000 actions.
-        /// </summary>
-        /// <param name="cardID">The ID of the card to retrieve comments for.</param>
-        /// <returns></returns>
-        private static async Task<List<TrelloActionModel>> GetCardCommentsAsync(string cardID)
-        {
-            // get only comment actions for this card
-            var url =
-                $"https://api.trello.com/1/cards/{cardID}/actions?"
-                + $"key={_apiKey}"
-                + $"&token={_apiToken}"
-                + $"&filter=commentCard";
-            string textResponse = await _httpClient.GetStringAsync(url).ConfigureAwait(false);
-
-            var cardActions = new List<TrelloActionModel>();
-            cardActions = JsonSerializer.Deserialize<List<TrelloActionModel>>(
-                textResponse,
-                _jsonDeserializeOptions
-            );
-
-            // no actions = no comments
-            if (cardActions == null)
-            {
-                return new List<TrelloActionModel>();
-            }
-
-            // already filtered via the api call
-            return cardActions.ToList();
         }
 
         /// <summary>
