@@ -280,7 +280,8 @@ namespace GoldenSyrupGames.T2MD
                     archivedListPath,
                     boardPath,
                     ref archivedListIndex,
-                    ref nonArchivedListIndex
+                    ref nonArchivedListIndex,
+                    options
                 );
             }
 
@@ -425,12 +426,15 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="archivedListIndex">index to use for this board if it's archived</param>
         /// <param name="nonArchivedListIndex">index to use for this board if it's not
         /// archived</param>
+        /// <param name="options">The parsed options we received on the commandline from the
+        /// user</param>
         private static void ProcessTrelloList(
             TrelloListModel trelloList,
             string archivedListPath,
             string boardPath,
             ref int archivedListIndex,
-            ref int nonArchivedListIndex
+            ref int nonArchivedListIndex,
+            CliOptions options
         )
         {
             if (!trelloList.AreAllRequiredFieldsFilled())
@@ -445,7 +449,9 @@ namespace GoldenSyrupGames.T2MD
             // create a folder for each list.
             // remove special characters
             string usableListName = FileSystem.SanitiseForPath(trelloList.Name);
-            var listFolderName = $"{listIndex} {usableListName}";
+            string listFolderName = options.NoNumbering
+                ? usableListName
+                : $"{listIndex} {usableListName}";
             string listPath = Path.Combine(outerPath, listFolderName);
             Directory.CreateDirectory(listPath);
 
@@ -539,7 +545,8 @@ namespace GoldenSyrupGames.T2MD
                     cardFolderPath,
                     options.IgnoreFailedAttachmentDownloads,
                     options.AlwaysUseForwardSlashes,
-                    trelloBoard.Name
+                    trelloBoard.Name,
+                    options
                 );
             }
 
@@ -600,8 +607,10 @@ namespace GoldenSyrupGames.T2MD
         {
             // inject the full title into its output
             var descriptionContents = $"# {trelloCard.Name}\n\n{trelloCard.Desc}";
-            // sort the cards in order
-            var descriptionFilename = $"{cardIndex} {usableCardName}.md";
+            // sort the cards in order unless specified otherwise
+            var descriptionFilename = options.NoNumbering
+                ? $"{usableCardName}.md"
+                : $"{cardIndex} {usableCardName}.md";
             // put archived cards in a subfolder
             string descriptionPath = Path.Join(cardFolderPath, descriptionFilename);
             await File.WriteAllTextAsync(descriptionPath, descriptionContents)
@@ -659,7 +668,9 @@ namespace GoldenSyrupGames.T2MD
                     checklistsContents += "\n";
                 }
                 // write the file
-                var checklistsFilename = $"{cardIndex} {usableCardName} - Checklists.md";
+                var checklistsFilename = options.NoNumbering
+                    ? $"{usableCardName} - Checklists.md"
+                    : $"{cardIndex} {usableCardName} - Checklists.md";
                 string checklistsPath = Path.Join(cardFolderPath, checklistsFilename);
                 await File.WriteAllTextAsync(checklistsPath, checklistsContents)
                     .ConfigureAwait(false);
@@ -713,7 +724,9 @@ namespace GoldenSyrupGames.T2MD
                     commentsContents += "\n\n";
                 }
                 // write the file
-                var commentsFilename = $"{cardIndex} {usableCardName} - Comments.md";
+                var commentsFilename = options.NoNumbering
+                    ? $"{usableCardName} - Comments.md"
+                    : $"{cardIndex} {usableCardName} - Comments.md";
                 var commentsPath = Path.Join(cardFolderPath, commentsFilename);
                 await File.WriteAllTextAsync(commentsPath, commentsContents).ConfigureAwait(false);
                 return (commentsContents, commentsPath);
@@ -749,7 +762,8 @@ namespace GoldenSyrupGames.T2MD
             string cardFolderPath,
             bool ignoreFailedAttachmentDownloads,
             bool alwaysUseForwardSlashes,
-            string boardName
+            string boardName,
+            CliOptions options
         )
         {
             if (uploadedAttachments.Count() > 0)
@@ -789,7 +803,9 @@ namespace GoldenSyrupGames.T2MD
                 attachmentListContents += String.Join("\n", AttachmentTableLines);
 
                 // write the file listing all the attachments
-                var attachmentListFilename = $"{cardIndex} {usableCardName} - Attachments.md";
+                var attachmentListFilename = options.NoNumbering
+                    ? $"{usableCardName} - Attachments.md"
+                    : $"{cardIndex} {usableCardName} - Attachments.md";
                 string attachmentListPath = Path.Join(cardFolderPath, attachmentListFilename);
                 await File.WriteAllTextAsync(attachmentListPath, attachmentListContents)
                     .ConfigureAwait(false);
