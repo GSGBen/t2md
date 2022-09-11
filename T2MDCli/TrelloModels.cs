@@ -9,17 +9,23 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// Partial model of the API response to /board (maybe?) to deserialize json to. We only use
     /// this as listed in the response to /members/me/boards.
+    /// Pretty sure this is the same as TrelloBoardModel so could combine.
     /// </summary>
     public class TrelloApiBoardModel
     {
         public string Name { get; set; } = "";
         public string ShortLink { get; set; } = "";
+        public string ID { get; set; } = "";
 
         // workaround for no Required attribute. Returns true if we have data in fields that should
         // always have data
         public bool AreAllRequiredFieldsFilled()
         {
-            if (string.IsNullOrEmpty(Name) || string.IsNullOrEmpty(ShortLink))
+            if (
+                string.IsNullOrEmpty(ID)
+                || string.IsNullOrEmpty(Name)
+                || string.IsNullOrEmpty(ShortLink)
+            )
             {
                 return false;
             }
