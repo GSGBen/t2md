@@ -269,8 +269,13 @@ namespace GoldenSyrupGames.T2MD
                 list => list.Pos
             );
 
+            // differentiate duplicate list names
+            Dictionary<ITrelloCommon, string> duplicateSuffixes = GetDuplicateSuffixes(
+                orderedLists
+            );
+
             // create folders for each list.
-            // number them so they're shown in order
+            // optionally number them so they're shown in order
             var nonArchivedListIndex = 0;
             var archivedListIndex = 0;
             foreach (TrelloListModel trelloList in orderedLists)
@@ -281,7 +286,8 @@ namespace GoldenSyrupGames.T2MD
                     boardPath,
                     ref archivedListIndex,
                     ref nonArchivedListIndex,
-                    options
+                    options,
+                    duplicateSuffixes[trelloList]
                 );
             }
 
@@ -293,6 +299,12 @@ namespace GoldenSyrupGames.T2MD
             //   all.
             IOrderedEnumerable<TrelloCardModel> orderedCards = trelloBoard.Cards.OrderBy(
                 card => card.Pos
+            );
+
+            // differentiate duplicate cards. Do it per list because lists will become folders,
+            // cards will become files and that makes the most sense for the user
+            Dictionary<ITrelloCommon, string> duplicateCardSuffixes = GetDuplicateSuffixes(
+                orderedCards
             );
 
             // process each card
@@ -327,7 +339,8 @@ namespace GoldenSyrupGames.T2MD
                         listPath,
                         trelloBoard,
                         options,
-                        boardComments
+                        boardComments,
+                        duplicateCardSuffixes[trelloCard]
                     )
                 );
 
@@ -428,13 +441,16 @@ namespace GoldenSyrupGames.T2MD
         /// archived</param>
         /// <param name="options">The parsed options we received on the commandline from the
         /// user</param>
+        /// <param name="duplicateDifferentiator">If we're not numbering (options.NoNumbering)
+        /// and this isn't empty, we'll append it to the card name to differentiate us. </param>
         private static void ProcessTrelloList(
             TrelloListModel trelloList,
             string archivedListPath,
             string boardPath,
             ref int archivedListIndex,
             ref int nonArchivedListIndex,
-            CliOptions options
+            CliOptions options,
+            string duplicateDifferentiator
         )
         {
             if (!trelloList.AreAllRequiredFieldsFilled())
@@ -449,6 +465,10 @@ namespace GoldenSyrupGames.T2MD
             // create a folder for each list.
             // remove special characters
             string usableListName = FileSystem.SanitiseForPath(trelloList.Name);
+            if (options.NoNumbering && !string.IsNullOrEmpty(duplicateDifferentiator))
+            {
+                usableListName += $" {duplicateDifferentiator}";
+            }
             string listFolderName = options.NoNumbering
                 ? usableListName
                 : $"{listIndex} {usableListName}";
@@ -491,6 +511,8 @@ namespace GoldenSyrupGames.T2MD
         /// user</param>
         /// <param name="boardActions">The list of all comments for the board so we can retrieve
         /// ours.</param>
+        /// <param name="duplicateDifferentiator">If we're not numbering (options.NoNumbering)
+        /// and this isn't empty, we'll append it to the card name to differentiate us. </param>
         /// <returns></returns>
         private static async Task ProcessTrelloCardAsync(
             TrelloCardModel trelloCard,
@@ -498,7 +520,8 @@ namespace GoldenSyrupGames.T2MD
             string cardFolderPath,
             TrelloBoardModel trelloBoard,
             CliOptions options,
-            List<TrelloActionModel> boardComments
+            List<TrelloActionModel> boardComments,
+            string duplicateDifferentiator
         )
         {
             // restrict the maximum filename length for all files. Just via the title, not any
@@ -510,6 +533,10 @@ namespace GoldenSyrupGames.T2MD
             string usableCardName = trelloCard.Name.Substring(0, actualOrRestrictedLength);
             // remove special characters
             usableCardName = FileSystem.SanitiseForPath(usableCardName);
+            if (options.NoNumbering && !string.IsNullOrEmpty(duplicateDifferentiator))
+            {
+                usableCardName += $" {duplicateDifferentiator}";
+            }
 
             // write the description to a markdown file
             Task<(string, string)> WriteCardDescriptionTask = WriteCardDescriptionAsync(
@@ -982,6 +1009,88 @@ namespace GoldenSyrupGames.T2MD
                     await File.WriteAllTextAsync(commentsPath, replacedCommentsContents)
                         .ConfigureAwait(false);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Given a list of Trello models with Name properties that might be duplicates, returns a
+        /// Dict containing each input entry as a key, and a unique incrementing (per duplicate
+        /// name, not total) number in a string as their value if they had a duplicate name, or an
+        /// empty string if they didn't. <para />
+        /// Cards will be de-duplicated per list.
+        /// E.g.<br />
+        ///     ["Card 1", "Card 2", "Card 1"]<br />
+        /// would return<br />
+        ///     {"Card 1": "1", "Card 2"; "", "Card 1": "2"}. <para />
+        /// </summary>
+        /// <param name="potentialDuplicates"></param>
+        /// <returns></returns>
+        public static Dictionary<ITrelloCommon, string> GetDuplicateSuffixes(
+            IEnumerable<ITrelloCommon> potentialDuplicates
+        )
+        {
+            var output = new Dictionary<ITrelloCommon, string>();
+
+            // track how many times we've seen each name
+            var occurrences = new Dictionary<string, int>();
+
+            foreach (ITrelloCommon potentialDuplicate in potentialDuplicates)
+            {
+                string name = GetDuplicateNameKey(potentialDuplicate);
+                // increment how many times we've seen this name.
+                int count;
+                // if in there, grab the current value, then increment it.
+                // argh: TryGetValue() sets the output variable to default (0) here if not found.
+                if (occurrences.TryGetValue(name, out count))
+                {
+                    count++;
+                }
+                else
+                {
+                    // default if not already in there
+                    count = 1;
+                }
+                // update it
+                occurrences[name] = count;
+
+                // note in the output. for now specify initial 1s as well as we don't know if
+                // they'll be duplicates yet
+                output[potentialDuplicate] = count.ToString();
+            }
+
+            // clear suffixes of those that arent duplicate
+            string oneAsString = 1.ToString();
+            foreach ((ITrelloCommon entry, string suffix) in output)
+            {
+                string name = GetDuplicateNameKey(entry);
+                if (suffix == oneAsString && occurrences[name] == 1)
+                {
+                    output[entry] = "";
+                }
+            }
+
+            return output;
+        }
+
+        /// <summary>
+        /// Generates the card/list name key used in GetDuplicateSuffixes() so that card names are
+        /// only differentiated within each list. <para />
+        /// For lists (or other non-cards) the list name is returned unchanged. <para />
+        /// For cards the list ID is appended to the card name.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        private static string GetDuplicateNameKey(ITrelloCommon potentialDuplicate)
+        {
+            // notes: `as` returns null if the cast fails, casting (prefixing with `(type)`) throws
+            // an exception if the cast fails
+            var card = potentialDuplicate as TrelloCardModel;
+            if (card != null)
+            {
+                return card.Name + card.IDList;
+            }
+            else
+            {
+                return potentialDuplicate.Name;
             }
         }
     }

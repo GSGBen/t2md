@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace GoldenSyrupGames.T2MD.Tests
@@ -54,6 +55,27 @@ namespace GoldenSyrupGames.T2MD.Tests
             {
                 Assert.Fail("No exception thrown.");
             }
+        }
+
+        [TestMethod]
+        public void GetDuplicateSuffixes_CardsSameList_ReturnsCorrectSuffixes()
+        {
+            var card1 = new TrelloCardModel() { Name = "Card 1", IDList = "1" };
+            var card2 = new TrelloCardModel() { Name = "Card 2", IDList = "1" };
+            var card3 = new TrelloCardModel() { Name = "Card 1", IDList = "1" };
+
+            var input = new TrelloCardModel[] { card1, card2, card3, };
+
+            var output = new Dictionary<ITrelloCommon, string>()
+            {
+                { card1, "1" },
+                { card2, "" },
+                { card3, "2" }
+            };
+
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input);
+
+            CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
     }
 }

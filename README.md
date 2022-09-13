@@ -36,6 +36,7 @@ Example layout:
 
 ## Usage
 
+- Run `t2md.exe --help` to see options
 - Run `t2md.exe --output-folder <backup destination folder>` once to generate `t2md.json` in the current directory
 - Browse to https://trello.com/app-key and copy your `Key`
 - Replace `<key>` with it at the end of the following URL, browse to it and continue to retrieve your token
@@ -44,6 +45,13 @@ Example layout:
 - Run `t2md.exe --output-folder <backup destination folder>` again.
   A t2md subfolder will be created under this and all Trello boards will be backed up to it.
   - **WARNING:** The entire t2md subfolder will be deleted and recreated each time.
+
+## Exporting to Obsidian or other knowledgebase formats
+
+Run `t2md.exe --help` to see options to improve this. Recommended: 
+
+- `--always-use-forward-slashes`
+- `--no-numbering`
 
 ## Videogames
 
