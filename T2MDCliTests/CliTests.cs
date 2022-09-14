@@ -73,7 +73,7 @@ namespace GoldenSyrupGames.T2MD.Tests
                 { card3, "2" }
             };
 
-            var cardSuffixes = Cli.GetDuplicateSuffixes(input);
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, 20);
 
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }

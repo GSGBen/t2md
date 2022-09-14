@@ -271,7 +271,8 @@ namespace GoldenSyrupGames.T2MD
 
             // differentiate duplicate list names
             Dictionary<ITrelloCommon, string> duplicateSuffixes = GetDuplicateSuffixes(
-                orderedLists
+                orderedLists,
+                options.MaxCardFilenameTitleLength
             );
 
             // create folders for each list.
@@ -304,7 +305,8 @@ namespace GoldenSyrupGames.T2MD
             // differentiate duplicate cards. Do it per list because lists will become folders,
             // cards will become files and that makes the most sense for the user
             Dictionary<ITrelloCommon, string> duplicateCardSuffixes = GetDuplicateSuffixes(
-                orderedCards
+                orderedCards,
+                options.MaxCardFilenameTitleLength
             );
 
             // process each card
@@ -526,13 +528,11 @@ namespace GoldenSyrupGames.T2MD
         {
             // restrict the maximum filename length for all files. Just via the title, not any
             // suffix or prefix
-            int actualOrRestrictedLength = Math.Min(
-                trelloCard.Name.Length,
+            string usableCardName = GetUsableCardName(
+                trelloCard,
                 options.MaxCardFilenameTitleLength
             );
-            string usableCardName = trelloCard.Name.Substring(0, actualOrRestrictedLength);
-            // remove special characters
-            usableCardName = FileSystem.SanitiseForPath(usableCardName);
+
             if (options.NoNumbering && !string.IsNullOrEmpty(duplicateDifferentiator))
             {
                 usableCardName += $" {duplicateDifferentiator}";
@@ -608,6 +608,26 @@ namespace GoldenSyrupGames.T2MD
                 commentsContents,
                 commentsPath
             );
+        }
+
+        /// <summary>
+        /// Returns the name of the card limited to the length specified by the user and with any
+        /// special characters removed.
+        /// </summary>
+        private static string GetUsableCardName(
+            TrelloCardModel trelloCard,
+            int maxCardFilenameTitleLength
+        )
+        {
+            int actualOrRestrictedLength = Math.Min(
+                trelloCard.Name.Length,
+                maxCardFilenameTitleLength
+            );
+            string usableCardName = trelloCard.Name.Substring(0, actualOrRestrictedLength);
+            // remove special characters
+            usableCardName = FileSystem.SanitiseForPath(usableCardName);
+
+            return usableCardName;
         }
 
         /// <summary>
@@ -796,7 +816,9 @@ namespace GoldenSyrupGames.T2MD
             if (uploadedAttachments.Count() > 0)
             {
                 // create a folder for this card's attachments
-                var attachmentFolderName = $"{cardIndex} {usableCardName} - Attachments";
+                var attachmentFolderName = options.NoNumbering
+                    ? $"{usableCardName} - Attachments"
+                    : $"{cardIndex} {usableCardName} - Attachments";
                 string attachmentFolderPath = Path.Join(cardFolderPath, attachmentFolderName);
                 Directory.CreateDirectory(attachmentFolderPath);
 
@@ -1026,7 +1048,8 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="potentialDuplicates"></param>
         /// <returns></returns>
         public static Dictionary<ITrelloCommon, string> GetDuplicateSuffixes(
-            IEnumerable<ITrelloCommon> potentialDuplicates
+            IEnumerable<ITrelloCommon> potentialDuplicates,
+            int maxCardFilenameTitleLength
         )
         {
             var output = new Dictionary<ITrelloCommon, string>();
@@ -1036,7 +1059,7 @@ namespace GoldenSyrupGames.T2MD
 
             foreach (ITrelloCommon potentialDuplicate in potentialDuplicates)
             {
-                string name = GetDuplicateNameKey(potentialDuplicate);
+                string name = GetDuplicateNameKey(potentialDuplicate, maxCardFilenameTitleLength);
                 // increment how many times we've seen this name.
                 int count;
                 // if in there, grab the current value, then increment it.
@@ -1062,7 +1085,7 @@ namespace GoldenSyrupGames.T2MD
             string oneAsString = 1.ToString();
             foreach ((ITrelloCommon entry, string suffix) in output)
             {
-                string name = GetDuplicateNameKey(entry);
+                string name = GetDuplicateNameKey(entry, maxCardFilenameTitleLength);
                 if (suffix == oneAsString && occurrences[name] == 1)
                 {
                     output[entry] = "";
@@ -1078,15 +1101,21 @@ namespace GoldenSyrupGames.T2MD
         /// For lists (or other non-cards) the list name is returned unchanged. <para />
         /// For cards the list ID is appended to the card name.
         /// </summary>
-        /// <exception cref="NotImplementedException"></exception>
-        private static string GetDuplicateNameKey(ITrelloCommon potentialDuplicate)
+        private static string GetDuplicateNameKey(
+            ITrelloCommon potentialDuplicate,
+            int maxCardFilenameTitleLength
+        )
         {
             // notes: `as` returns null if the cast fails, casting (prefixing with `(type)`) throws
             // an exception if the cast fails
             var card = potentialDuplicate as TrelloCardModel;
             if (card != null)
             {
-                return card.Name + card.IDList;
+                // important: check duplicity via the actual card name we'll write to disk. Without
+                // this there were a few cards that were unique at full length but duplicate when
+                // truncated, that weren't picked up.
+                string usableCardName = GetUsableCardName(card, maxCardFilenameTitleLength);
+                return usableCardName + card.IDList;
             }
             else
             {
