@@ -1124,7 +1124,7 @@ namespace GoldenSyrupGames.T2MD
             }
             else
             {
-                return potentialDuplicate.Name;
+                return potentialDuplicate.Name.ToLower();
             }
         }
     }

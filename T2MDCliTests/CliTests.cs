@@ -156,8 +156,8 @@ namespace GoldenSyrupGames.T2MD.Tests
             var output = new Dictionary<ITrelloCommon, string>()
             {
                 { List1, "1" },
-                { List2, "2" },
-                { List3, "3" }
+                { List2, "" },
+                { List3, "2" }
             };
 
             var ListSuffixes = Cli.GetDuplicateSuffixes(input, 2);
