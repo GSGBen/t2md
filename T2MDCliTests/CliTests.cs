@@ -77,5 +77,47 @@ namespace GoldenSyrupGames.T2MD.Tests
 
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
+
+        /// <summary>
+        /// Test the issue of cards that are unique when full length but the same when truncated.
+        /// </summary>
+        [TestMethod]
+        public void GetDuplicateSuffixes_CardsTruncated_ReturnsCorrectSuffixes()
+        {
+            var card1 = new TrelloCardModel() { Name = "Card 1", IDList = "1" };
+            var card2 = new TrelloCardModel() { Name = "Card 2", IDList = "1" };
+            var card3 = new TrelloCardModel() { Name = "Card 1", IDList = "1" };
+
+            var input = new TrelloCardModel[] { card1, card2, card3, };
+
+            var output = new Dictionary<ITrelloCommon, string>()
+            {
+                { card1, "1" },
+                { card2, "2" },
+                { card3, "3" }
+            };
+
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, 2);
+
+            CollectionAssert.AreEquivalent(cardSuffixes, output);
+        }
+
+        /// <summary>
+        /// Test the issue of cards that are unique when full length but the same when truncated.
+        /// </summary>
+        [TestMethod]
+        public void GetDuplicateSuffixes_DuplicateCase_ReturnsCorrectSuffixes()
+        {
+            var card1 = new TrelloCardModel() { Name = "Card 1", IDList = "1" };
+            var card2 = new TrelloCardModel() { Name = "CARD 1", IDList = "1" };
+
+            var input = new TrelloCardModel[] { card1, card2, };
+
+            var output = new Dictionary<ITrelloCommon, string>() { { card1, "1" }, { card2, "2" } };
+
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+
+            CollectionAssert.AreEquivalent(cardSuffixes, output);
+        }
     }
 }

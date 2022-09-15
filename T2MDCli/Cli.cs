@@ -1111,10 +1111,15 @@ namespace GoldenSyrupGames.T2MD
             var card = potentialDuplicate as TrelloCardModel;
             if (card != null)
             {
-                // important: check duplicity via the actual card name we'll write to disk. Without
-                // this there were a few cards that were unique at full length but duplicate when
-                // truncated, that weren't picked up.
-                string usableCardName = GetUsableCardName(card, maxCardFilenameTitleLength);
+                // important:
+                // - check duplicity via the actual card name we'll write to disk. Without this
+                //   there were a few cards that were unique at full length but duplicate when
+                //   truncated, that weren't picked up.
+                // - compare case insensitive. We want to write the original case to disk (so it's
+                //   not in `GetUsableCardName()`) but still avoid overwriting a different one
+                //   that's already been written on case-insensitive systems
+                string usableCardName = GetUsableCardName(card, maxCardFilenameTitleLength)
+                    .ToLower();
                 return usableCardName + card.IDList;
             }
             else
