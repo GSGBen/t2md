@@ -119,5 +119,68 @@ namespace GoldenSyrupGames.T2MD.Tests
 
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
+
+        [TestMethod]
+        public void GetDuplicateSuffixes_Lists_ReturnsCorrectSuffixes()
+        {
+            var List1 = new TrelloListModel() { Name = "List 1" };
+            var List2 = new TrelloListModel() { Name = "List 2" };
+            var List3 = new TrelloListModel() { Name = "List 1" };
+
+            var input = new TrelloListModel[] { List1, List2, List3, };
+
+            var output = new Dictionary<ITrelloCommon, string>()
+            {
+                { List1, "1" },
+                { List2, "" },
+                { List3, "2" }
+            };
+
+            var ListSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+
+            CollectionAssert.AreEquivalent(ListSuffixes, output);
+        }
+
+        /// <summary>
+        /// Test the issue of Lists that are unique when full length but the same when truncated.
+        /// </summary>
+        [TestMethod]
+        public void GetDuplicateSuffixes_ListsTruncated_ReturnsCorrectSuffixes()
+        {
+            var List1 = new TrelloListModel() { Name = "List 1" };
+            var List2 = new TrelloListModel() { Name = "List 2" };
+            var List3 = new TrelloListModel() { Name = "List 1" };
+
+            var input = new TrelloListModel[] { List1, List2, List3, };
+
+            var output = new Dictionary<ITrelloCommon, string>()
+            {
+                { List1, "1" },
+                { List2, "2" },
+                { List3, "3" }
+            };
+
+            var ListSuffixes = Cli.GetDuplicateSuffixes(input, 2);
+
+            CollectionAssert.AreEquivalent(ListSuffixes, output);
+        }
+
+        /// <summary>
+        /// Test the issue of Lists that are unique when full length but the same when truncated.
+        /// </summary>
+        [TestMethod]
+        public void GetDuplicateSuffixes_ListsDuplicateCase_ReturnsCorrectSuffixes()
+        {
+            var List1 = new TrelloListModel() { Name = "List 1" };
+            var List2 = new TrelloListModel() { Name = "LIST 1" };
+
+            var input = new TrelloListModel[] { List1, List2, };
+
+            var output = new Dictionary<ITrelloCommon, string>() { { List1, "1" }, { List2, "2" } };
+
+            var ListSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+
+            CollectionAssert.AreEquivalent(ListSuffixes, output);
+        }
     }
 }
