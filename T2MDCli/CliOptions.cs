@@ -64,6 +64,20 @@ namespace GoldenSyrupGames.T2MD
         )]
         public bool AlwaysUseForwardSlashes { get; set; } = false;
 
+        /// <summary>Disable ordering of cards and lists using numbers to match the source order.
+        /// <para />
+        /// Using a negative bool because it's a user-facing switch and we want the default
+        /// enabled.
+        /// </summary>
+        [Option(
+            "no-numbering",
+            Default = false,
+            HelpText = "For exporting to systems like Obsidian, you probably don't want numbered "
+                + "prefixes.\n If specified, this doesn't prefix numbers to maintain list and "
+                + "card ordering."
+        )]
+        public bool NoNumbering { get; set; } = false;
+
         public static Task PrintUsage(IEnumerable<Error> errors)
         {
             Console.WriteLine(

@@ -7,11 +7,19 @@ using System.Threading.Tasks;
 namespace GoldenSyrupGames.T2MD
 {
     /// <summary>
+    /// Things common to multiple Trello models I need to work with.
+    /// </summary>
+    public interface ITrelloCommon
+    {
+        public string Name { get; set; }
+    }
+
+    /// <summary>
     /// Partial model of the API response to /board (maybe?) to deserialize json to. We only use
     /// this as listed in the response to /members/me/boards.
     /// Pretty sure this is the same as TrelloBoardModel so could combine.
     /// </summary>
-    public class TrelloApiBoardModel
+    public class TrelloApiBoardModel : ITrelloCommon
     {
         public string Name { get; set; } = "";
         public string ShortLink { get; set; } = "";
@@ -38,7 +46,7 @@ namespace GoldenSyrupGames.T2MD
     /// Partial model of the json from backing up a Trello board (via the web UI, not via the API.
     /// E.g. trello.com/b/[id].json
     /// </summary>
-    public class TrelloBoardModel
+    public class TrelloBoardModel : ITrelloCommon
     {
         public string Name { get; set; } = "";
         public string ShortLink { get; set; } = "";
@@ -65,7 +73,7 @@ namespace GoldenSyrupGames.T2MD
     /// Partial model of lists forming part of TrelloBoardModel, + some extra properties we store
     /// results in.
     /// </summary>
-    public class TrelloListModel
+    public class TrelloListModel : ITrelloCommon
     {
         public string Name { get; set; } = "";
         public string ID { get; set; } = "";
@@ -117,7 +125,7 @@ namespace GoldenSyrupGames.T2MD
     /// <summary>
     /// Partial model of cards forming part of TrelloBoardModel
     /// </summary>
-    public class TrelloCardModel
+    public class TrelloCardModel : ITrelloCommon
     {
         public string Name { get; set; } = "";
         public string ID { get; set; } = "";
@@ -143,6 +151,11 @@ namespace GoldenSyrupGames.T2MD
         public bool Closed { get; set; } = false;
 
         /// <summary>
+        /// Contains a useful short ID.
+        /// </summary>
+        public string ShortUrl { get; set; } = "";
+
+        /// <summary>
         /// the checklists that are in this card
         /// </summary>
         public List<string> IDChecklists { get; set; } = new List<string>();
@@ -157,6 +170,7 @@ namespace GoldenSyrupGames.T2MD
                 string.IsNullOrEmpty(Name)
                 || string.IsNullOrEmpty(ID)
                 || string.IsNullOrEmpty(IDList)
+                || string.IsNullOrEmpty(ShortUrl)
             )
             {
                 return false;

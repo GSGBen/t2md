@@ -269,8 +269,14 @@ namespace GoldenSyrupGames.T2MD
                 list => list.Pos
             );
 
+            // differentiate duplicate list names
+            Dictionary<ITrelloCommon, string> duplicateSuffixes = GetDuplicateSuffixes(
+                orderedLists,
+                options.MaxCardFilenameTitleLength
+            );
+
             // create folders for each list.
-            // number them so they're shown in order
+            // optionally number them so they're shown in order
             var nonArchivedListIndex = 0;
             var archivedListIndex = 0;
             foreach (TrelloListModel trelloList in orderedLists)
@@ -280,7 +286,9 @@ namespace GoldenSyrupGames.T2MD
                     archivedListPath,
                     boardPath,
                     ref archivedListIndex,
-                    ref nonArchivedListIndex
+                    ref nonArchivedListIndex,
+                    options,
+                    duplicateSuffixes[trelloList]
                 );
             }
 
@@ -292,6 +300,13 @@ namespace GoldenSyrupGames.T2MD
             //   all.
             IOrderedEnumerable<TrelloCardModel> orderedCards = trelloBoard.Cards.OrderBy(
                 card => card.Pos
+            );
+
+            // differentiate duplicate cards. Do it per list because lists will become folders,
+            // cards will become files and that makes the most sense for the user
+            Dictionary<ITrelloCommon, string> duplicateCardSuffixes = GetDuplicateSuffixes(
+                orderedCards,
+                options.MaxCardFilenameTitleLength
             );
 
             // process each card
@@ -326,7 +341,8 @@ namespace GoldenSyrupGames.T2MD
                         listPath,
                         trelloBoard,
                         options,
-                        boardComments
+                        boardComments,
+                        duplicateCardSuffixes[trelloCard]
                     )
                 );
 
@@ -425,12 +441,18 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="archivedListIndex">index to use for this board if it's archived</param>
         /// <param name="nonArchivedListIndex">index to use for this board if it's not
         /// archived</param>
+        /// <param name="options">The parsed options we received on the commandline from the
+        /// user</param>
+        /// <param name="duplicateDifferentiator">If we're not numbering (options.NoNumbering)
+        /// and this isn't empty, we'll append it to the card name to differentiate us. </param>
         private static void ProcessTrelloList(
             TrelloListModel trelloList,
             string archivedListPath,
             string boardPath,
             ref int archivedListIndex,
-            ref int nonArchivedListIndex
+            ref int nonArchivedListIndex,
+            CliOptions options,
+            string duplicateDifferentiator
         )
         {
             if (!trelloList.AreAllRequiredFieldsFilled())
@@ -445,7 +467,13 @@ namespace GoldenSyrupGames.T2MD
             // create a folder for each list.
             // remove special characters
             string usableListName = FileSystem.SanitiseForPath(trelloList.Name);
-            var listFolderName = $"{listIndex} {usableListName}";
+            if (options.NoNumbering && !string.IsNullOrEmpty(duplicateDifferentiator))
+            {
+                usableListName += $" {duplicateDifferentiator}";
+            }
+            string listFolderName = options.NoNumbering
+                ? usableListName
+                : $"{listIndex} {usableListName}";
             string listPath = Path.Combine(outerPath, listFolderName);
             Directory.CreateDirectory(listPath);
 
@@ -485,6 +513,8 @@ namespace GoldenSyrupGames.T2MD
         /// user</param>
         /// <param name="boardActions">The list of all comments for the board so we can retrieve
         /// ours.</param>
+        /// <param name="duplicateDifferentiator">If we're not numbering (options.NoNumbering)
+        /// and this isn't empty, we'll append it to the card name to differentiate us. </param>
         /// <returns></returns>
         private static async Task ProcessTrelloCardAsync(
             TrelloCardModel trelloCard,
@@ -492,18 +522,21 @@ namespace GoldenSyrupGames.T2MD
             string cardFolderPath,
             TrelloBoardModel trelloBoard,
             CliOptions options,
-            List<TrelloActionModel> boardComments
+            List<TrelloActionModel> boardComments,
+            string duplicateDifferentiator
         )
         {
             // restrict the maximum filename length for all files. Just via the title, not any
             // suffix or prefix
-            int actualOrRestrictedLength = Math.Min(
-                trelloCard.Name.Length,
+            string usableCardName = GetUsableCardName(
+                trelloCard,
                 options.MaxCardFilenameTitleLength
             );
-            string usableCardName = trelloCard.Name.Substring(0, actualOrRestrictedLength);
-            // remove special characters
-            usableCardName = FileSystem.SanitiseForPath(usableCardName);
+
+            if (options.NoNumbering && !string.IsNullOrEmpty(duplicateDifferentiator))
+            {
+                usableCardName += $" {duplicateDifferentiator}";
+            }
 
             // write the description to a markdown file
             Task<(string, string)> WriteCardDescriptionTask = WriteCardDescriptionAsync(
@@ -539,7 +572,8 @@ namespace GoldenSyrupGames.T2MD
                     cardFolderPath,
                     options.IgnoreFailedAttachmentDownloads,
                     options.AlwaysUseForwardSlashes,
-                    trelloBoard.Name
+                    trelloBoard.Name,
+                    options
                 );
             }
 
@@ -577,6 +611,26 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
+        /// Returns the name of the card limited to the length specified by the user and with any
+        /// special characters removed.
+        /// </summary>
+        private static string GetUsableCardName(
+            TrelloCardModel trelloCard,
+            int maxCardFilenameTitleLength
+        )
+        {
+            int actualOrRestrictedLength = Math.Min(
+                trelloCard.Name.Length,
+                maxCardFilenameTitleLength
+            );
+            string usableCardName = trelloCard.Name.Substring(0, actualOrRestrictedLength);
+            // remove special characters
+            usableCardName = FileSystem.SanitiseForPath(usableCardName);
+
+            return usableCardName;
+        }
+
+        /// <summary>
         /// Write the card description to a markdown file.
         /// </summary>
         /// <param name="trelloCard">The model of the card parsed from the json backup</param>
@@ -600,8 +654,10 @@ namespace GoldenSyrupGames.T2MD
         {
             // inject the full title into its output
             var descriptionContents = $"# {trelloCard.Name}\n\n{trelloCard.Desc}";
-            // sort the cards in order
-            var descriptionFilename = $"{cardIndex} {usableCardName}.md";
+            // sort the cards in order unless specified otherwise
+            var descriptionFilename = options.NoNumbering
+                ? $"{usableCardName}.md"
+                : $"{cardIndex} {usableCardName}.md";
             // put archived cards in a subfolder
             string descriptionPath = Path.Join(cardFolderPath, descriptionFilename);
             await File.WriteAllTextAsync(descriptionPath, descriptionContents)
@@ -659,7 +715,9 @@ namespace GoldenSyrupGames.T2MD
                     checklistsContents += "\n";
                 }
                 // write the file
-                var checklistsFilename = $"{cardIndex} {usableCardName} - Checklists.md";
+                var checklistsFilename = options.NoNumbering
+                    ? $"{usableCardName} - Checklists.md"
+                    : $"{cardIndex} {usableCardName} - Checklists.md";
                 string checklistsPath = Path.Join(cardFolderPath, checklistsFilename);
                 await File.WriteAllTextAsync(checklistsPath, checklistsContents)
                     .ConfigureAwait(false);
@@ -713,7 +771,9 @@ namespace GoldenSyrupGames.T2MD
                     commentsContents += "\n\n";
                 }
                 // write the file
-                var commentsFilename = $"{cardIndex} {usableCardName} - Comments.md";
+                var commentsFilename = options.NoNumbering
+                    ? $"{usableCardName} - Comments.md"
+                    : $"{cardIndex} {usableCardName} - Comments.md";
                 var commentsPath = Path.Join(cardFolderPath, commentsFilename);
                 await File.WriteAllTextAsync(commentsPath, commentsContents).ConfigureAwait(false);
                 return (commentsContents, commentsPath);
@@ -749,13 +809,16 @@ namespace GoldenSyrupGames.T2MD
             string cardFolderPath,
             bool ignoreFailedAttachmentDownloads,
             bool alwaysUseForwardSlashes,
-            string boardName
+            string boardName,
+            CliOptions options
         )
         {
             if (uploadedAttachments.Count() > 0)
             {
                 // create a folder for this card's attachments
-                var attachmentFolderName = $"{cardIndex} {usableCardName} - Attachments";
+                var attachmentFolderName = options.NoNumbering
+                    ? $"{usableCardName} - Attachments"
+                    : $"{cardIndex} {usableCardName} - Attachments";
                 string attachmentFolderPath = Path.Join(cardFolderPath, attachmentFolderName);
                 Directory.CreateDirectory(attachmentFolderPath);
 
@@ -789,7 +852,9 @@ namespace GoldenSyrupGames.T2MD
                 attachmentListContents += String.Join("\n", AttachmentTableLines);
 
                 // write the file listing all the attachments
-                var attachmentListFilename = $"{cardIndex} {usableCardName} - Attachments.md";
+                var attachmentListFilename = options.NoNumbering
+                    ? $"{usableCardName} - Attachments.md"
+                    : $"{cardIndex} {usableCardName} - Attachments.md";
                 string attachmentListPath = Path.Join(cardFolderPath, attachmentListFilename);
                 await File.WriteAllTextAsync(attachmentListPath, attachmentListContents)
                     .ConfigureAwait(false);
@@ -966,6 +1031,100 @@ namespace GoldenSyrupGames.T2MD
                     await File.WriteAllTextAsync(commentsPath, replacedCommentsContents)
                         .ConfigureAwait(false);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Given a list of Trello models with Name properties that might be duplicates, returns a
+        /// Dict containing each input entry as a key, and a unique incrementing (per duplicate
+        /// name, not total) number in a string as their value if they had a duplicate name, or an
+        /// empty string if they didn't. <para />
+        /// Cards will be de-duplicated per list.
+        /// E.g.<br />
+        ///     ["Card 1", "Card 2", "Card 1"]<br />
+        /// would return<br />
+        ///     {"Card 1": "1", "Card 2"; "", "Card 1": "2"}. <para />
+        /// </summary>
+        /// <param name="potentialDuplicates"></param>
+        /// <returns></returns>
+        public static Dictionary<ITrelloCommon, string> GetDuplicateSuffixes(
+            IEnumerable<ITrelloCommon> potentialDuplicates,
+            int maxCardFilenameTitleLength
+        )
+        {
+            var output = new Dictionary<ITrelloCommon, string>();
+
+            // track how many times we've seen each name
+            var occurrences = new Dictionary<string, int>();
+
+            foreach (ITrelloCommon potentialDuplicate in potentialDuplicates)
+            {
+                string name = GetDuplicateNameKey(potentialDuplicate, maxCardFilenameTitleLength);
+                // increment how many times we've seen this name.
+                int count;
+                // if in there, grab the current value, then increment it.
+                // argh: TryGetValue() sets the output variable to default (0) here if not found.
+                if (occurrences.TryGetValue(name, out count))
+                {
+                    count++;
+                }
+                else
+                {
+                    // default if not already in there
+                    count = 1;
+                }
+                // update it
+                occurrences[name] = count;
+
+                // note in the output. for now specify initial 1s as well as we don't know if
+                // they'll be duplicates yet
+                output[potentialDuplicate] = count.ToString();
+            }
+
+            // clear suffixes of those that arent duplicate
+            string oneAsString = 1.ToString();
+            foreach ((ITrelloCommon entry, string suffix) in output)
+            {
+                string name = GetDuplicateNameKey(entry, maxCardFilenameTitleLength);
+                if (suffix == oneAsString && occurrences[name] == 1)
+                {
+                    output[entry] = "";
+                }
+            }
+
+            return output;
+        }
+
+        /// <summary>
+        /// Generates the card/list name key used in GetDuplicateSuffixes() so that card names are
+        /// only differentiated within each list. <para />
+        /// For lists (or other non-cards) the list name is returned unchanged. <para />
+        /// For cards the list ID is appended to the card name.
+        /// </summary>
+        private static string GetDuplicateNameKey(
+            ITrelloCommon potentialDuplicate,
+            int maxCardFilenameTitleLength
+        )
+        {
+            // notes: `as` returns null if the cast fails, casting (prefixing with `(type)`) throws
+            // an exception if the cast fails
+            var card = potentialDuplicate as TrelloCardModel;
+            if (card != null)
+            {
+                // important:
+                // - check duplicity via the actual card name we'll write to disk. Without this
+                //   there were a few cards that were unique at full length but duplicate when
+                //   truncated, that weren't picked up.
+                // - compare case insensitive. We want to write the original case to disk (so it's
+                //   not in `GetUsableCardName()`) but still avoid overwriting a different one
+                //   that's already been written on case-insensitive systems
+                string usableCardName = GetUsableCardName(card, maxCardFilenameTitleLength)
+                    .ToLower();
+                return usableCardName + card.IDList;
+            }
+            else
+            {
+                return potentialDuplicate.Name;
             }
         }
     }
