@@ -11,10 +11,25 @@ namespace GoldenSyrupGames.T2MD.Tests
     public class EmojiTests
     {
         [TestMethod]
-        public void ReplaceEmoji_StringWithEmoji_ReplacesEmoji()
+        public void ReplaceEmoji_EmojiInMiddleDefaultReplacement_ReplacesEmojiWithUnderscore()
         {
-            // TODO
-            throw new NotImplementedException();
+            var input = "start 💪☂ end";
+            var expectedOutput = "start __ end";
+
+            string actualOutput = Emoji.ReplaceEmoji(input);
+
+            Assert.AreEqual(expectedOutput, actualOutput);
+        }
+
+        [TestMethod]
+        public void ReplaceEmoji_EmojiInMiddleBlankReplacement_RemovesEmoji()
+        {
+            var input = "start 💪☂ end";
+            var expectedOutput = "start __ end";
+
+            string actualOutput = Emoji.ReplaceEmoji(input);
+
+            Assert.AreEqual(expectedOutput, actualOutput);
         }
     }
 }
