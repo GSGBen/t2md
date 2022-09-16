@@ -272,7 +272,7 @@ namespace GoldenSyrupGames.T2MD
             // differentiate duplicate list names
             Dictionary<ITrelloCommon, string> duplicateSuffixes = GetDuplicateSuffixes(
                 orderedLists,
-                options.MaxCardFilenameTitleLength
+                options
             );
 
             // create folders for each list.
@@ -306,7 +306,7 @@ namespace GoldenSyrupGames.T2MD
             // cards will become files and that makes the most sense for the user
             Dictionary<ITrelloCommon, string> duplicateCardSuffixes = GetDuplicateSuffixes(
                 orderedCards,
-                options.MaxCardFilenameTitleLength
+                options
             );
 
             // process each card
@@ -528,10 +528,7 @@ namespace GoldenSyrupGames.T2MD
         {
             // restrict the maximum filename length for all files. Just via the title, not any
             // suffix or prefix
-            string usableCardName = GetUsableCardName(
-                trelloCard,
-                options.MaxCardFilenameTitleLength
-            );
+            string usableCardName = GetUsableCardName(trelloCard, options);
 
             if (options.NoNumbering && !string.IsNullOrEmpty(duplicateDifferentiator))
             {
@@ -614,14 +611,11 @@ namespace GoldenSyrupGames.T2MD
         /// Returns the name of the card limited to the length specified by the user and with any
         /// special characters removed.
         /// </summary>
-        private static string GetUsableCardName(
-            TrelloCardModel trelloCard,
-            int maxCardFilenameTitleLength
-        )
+        private static string GetUsableCardName(TrelloCardModel trelloCard, CliOptions options)
         {
             int actualOrRestrictedLength = Math.Min(
                 trelloCard.Name.Length,
-                maxCardFilenameTitleLength
+                options.MaxCardFilenameTitleLength
             );
             string usableCardName = trelloCard.Name.Substring(0, actualOrRestrictedLength);
             // remove special characters
@@ -1058,7 +1052,7 @@ namespace GoldenSyrupGames.T2MD
         /// <returns></returns>
         public static Dictionary<ITrelloCommon, string> GetDuplicateSuffixes(
             IEnumerable<ITrelloCommon> potentialDuplicates,
-            int maxCardFilenameTitleLength
+            CliOptions options
         )
         {
             var output = new Dictionary<ITrelloCommon, string>();
@@ -1068,7 +1062,7 @@ namespace GoldenSyrupGames.T2MD
 
             foreach (ITrelloCommon potentialDuplicate in potentialDuplicates)
             {
-                string name = GetDuplicateNameKey(potentialDuplicate, maxCardFilenameTitleLength);
+                string name = GetDuplicateNameKey(potentialDuplicate, options);
                 // increment how many times we've seen this name.
                 int count;
                 // if in there, grab the current value, then increment it.
@@ -1094,7 +1088,7 @@ namespace GoldenSyrupGames.T2MD
             string oneAsString = 1.ToString();
             foreach ((ITrelloCommon entry, string suffix) in output)
             {
-                string name = GetDuplicateNameKey(entry, maxCardFilenameTitleLength);
+                string name = GetDuplicateNameKey(entry, options);
                 if (suffix == oneAsString && occurrences[name] == 1)
                 {
                     output[entry] = "";
@@ -1112,7 +1106,7 @@ namespace GoldenSyrupGames.T2MD
         /// </summary>
         private static string GetDuplicateNameKey(
             ITrelloCommon potentialDuplicate,
-            int maxCardFilenameTitleLength
+            CliOptions options
         )
         {
             // notes: `as` returns null if the cast fails, casting (prefixing with `(type)`) throws
@@ -1127,8 +1121,7 @@ namespace GoldenSyrupGames.T2MD
                 // - compare case insensitive. We want to write the original case to disk (so it's
                 //   not in `GetUsableCardName()`) but still avoid overwriting a different one
                 //   that's already been written on case-insensitive systems
-                string usableCardName = GetUsableCardName(card, maxCardFilenameTitleLength)
-                    .ToLower();
+                string usableCardName = GetUsableCardName(card, options).ToLower();
                 return usableCardName + card.IDList;
             }
             else

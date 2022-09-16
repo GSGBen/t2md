@@ -10,7 +10,7 @@ using CommandLine;
 namespace GoldenSyrupGames.T2MD
 {
     // commandline arguments
-    class CliOptions
+    public class CliOptions
     {
         // The path under which the backups will be stored and the markdown folder structure
         // created. Will be created if it doesn't exist.
@@ -77,6 +77,17 @@ namespace GoldenSyrupGames.T2MD
                 + "card ordering."
         )]
         public bool NoNumbering { get; set; } = false;
+
+        /// <summary>
+        /// Replace emoji with _.
+        /// </summary>
+        [Option(
+            "replace-emoji",
+            Default = false,
+            HelpText = "Dropbox doesn't support emoji in filenames.\n"
+                + "This switch replaces them with \"_\"."
+        )]
+        public bool ReplaceEmoji { get; set; } = false;
 
         public static Task PrintUsage(IEnumerable<Error> errors)
         {

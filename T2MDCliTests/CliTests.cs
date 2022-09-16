@@ -73,7 +73,8 @@ namespace GoldenSyrupGames.T2MD.Tests
                 { card3, "2" }
             };
 
-            var cardSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 20 };
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
@@ -97,7 +98,8 @@ namespace GoldenSyrupGames.T2MD.Tests
                 { card3, "3" }
             };
 
-            var cardSuffixes = Cli.GetDuplicateSuffixes(input, 2);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 2 };
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
@@ -115,7 +117,8 @@ namespace GoldenSyrupGames.T2MD.Tests
 
             var output = new Dictionary<ITrelloCommon, string>() { { card1, "1" }, { card2, "2" } };
 
-            var cardSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 20 };
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
@@ -136,7 +139,8 @@ namespace GoldenSyrupGames.T2MD.Tests
                 { List3, "2" }
             };
 
-            var ListSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 20 };
+            var ListSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(ListSuffixes, output);
         }
@@ -160,7 +164,8 @@ namespace GoldenSyrupGames.T2MD.Tests
                 { List3, "2" }
             };
 
-            var ListSuffixes = Cli.GetDuplicateSuffixes(input, 2);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 2 };
+            var ListSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(ListSuffixes, output);
         }
@@ -178,7 +183,8 @@ namespace GoldenSyrupGames.T2MD.Tests
 
             var output = new Dictionary<ITrelloCommon, string>() { { List1, "1" }, { List2, "2" } };
 
-            var ListSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 20 };
+            var ListSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(ListSuffixes, output);
         }
