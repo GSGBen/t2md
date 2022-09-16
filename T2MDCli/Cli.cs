@@ -652,9 +652,17 @@ namespace GoldenSyrupGames.T2MD
             CliOptions options
         )
         {
-            // inject the full title, and short url, into its output
+            // inject the full title, and short url, into its output. Add a prefix to the short URL
+            // to make the original more easily greppable: a search of just the URL will show all
+            // files that reference it.
             var descriptionContents =
-                $"# {trelloCard.Name}\n\n{trelloCard.ShortUrl}\n\n{trelloCard.Desc}";
+                $"# {trelloCard.Name}\n"
+                + $"\n"
+                + $"Original URL: {trelloCard.ShortUrl}\n"
+                + $"\n"
+                + $"---\n"
+                + $"\n"
+                + $"{trelloCard.Desc}";
             // sort the cards in order unless specified otherwise
             var descriptionFilename = options.NoNumbering
                 ? $"{usableCardName}.md"
