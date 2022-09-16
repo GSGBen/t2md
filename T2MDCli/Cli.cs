@@ -652,8 +652,9 @@ namespace GoldenSyrupGames.T2MD
             CliOptions options
         )
         {
-            // inject the full title into its output
-            var descriptionContents = $"# {trelloCard.Name}\n\n{trelloCard.Desc}";
+            // inject the full title, and short url, into its output
+            var descriptionContents =
+                $"# {trelloCard.Name}\n\n{trelloCard.ShortUrl}\n\n{trelloCard.Desc}";
             // sort the cards in order unless specified otherwise
             var descriptionFilename = options.NoNumbering
                 ? $"{usableCardName}.md"
