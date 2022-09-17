@@ -230,8 +230,14 @@ namespace GoldenSyrupGames.T2MD
             List<TrelloActionModel> boardComments = await GetBoardCommentsAsync(trelloApiBoard.ID);
 
             // write the json to file (overwrite).
+
             // without this linux will happily write /'s
             string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
+            if (options.RemoveEmoji)
+            {
+                usableBoardName = Emoji.ReplaceEmoji(usableBoardName, "");
+            }
+
             string boardOutputFilePath = Path.Combine(_outputPath, $"{usableBoardName}.json");
             using FileStream fileStream = File.Create(boardOutputFilePath);
             using Stream contentStream = await response.Content
