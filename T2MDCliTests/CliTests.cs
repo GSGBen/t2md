@@ -123,6 +123,25 @@ namespace GoldenSyrupGames.T2MD.Tests
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
 
+        /// <summary>
+        /// Test the issue of cards that are unique when full length but the same when truncated.
+        /// </summary>
+        [TestMethod]
+        public void GetDuplicateSuffixes_CardsEmojiRemoveEmoji_ReturnsCorrectSuffixes()
+        {
+            var card1 = new TrelloCardModel() { Name = "Card 💪", IDList = "1" };
+            var card2 = new TrelloCardModel() { Name = "Card ❤", IDList = "1" };
+
+            var input = new TrelloCardModel[] { card1, card2, };
+
+            var output = new Dictionary<ITrelloCommon, string>() { { card1, "1" }, { card2, "2" } };
+
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 20, RemoveEmoji = true };
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, options);
+
+            CollectionAssert.AreEquivalent(cardSuffixes, output);
+        }
+
         [TestMethod]
         public void GetDuplicateSuffixes_Lists_ReturnsCorrectSuffixes()
         {

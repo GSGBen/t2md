@@ -609,7 +609,8 @@ namespace GoldenSyrupGames.T2MD
 
         /// <summary>
         /// Returns the name of the card limited to the length specified by the user and with any
-        /// special characters removed.
+        /// filesystem-incompatible characters removed. <para />
+        /// If specified in options, emoji are removed here as well.
         /// </summary>
         private static string GetUsableCardName(TrelloCardModel trelloCard, CliOptions options)
         {
@@ -618,8 +619,13 @@ namespace GoldenSyrupGames.T2MD
                 options.MaxCardFilenameTitleLength
             );
             string usableCardName = trelloCard.Name.Substring(0, actualOrRestrictedLength);
-            // remove special characters
+            // remove special filesystem characters
             usableCardName = FileSystem.SanitiseForPath(usableCardName);
+            // remove emoji if specified
+            if (options.RemoveEmoji)
+            {
+                usableCardName = Emoji.ReplaceEmoji(usableCardName, "");
+            }
 
             return usableCardName;
         }

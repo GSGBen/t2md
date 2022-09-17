@@ -82,12 +82,11 @@ namespace GoldenSyrupGames.T2MD
         /// Replace emoji with _.
         /// </summary>
         [Option(
-            "replace-emoji",
+            "remove-emoji",
             Default = false,
-            HelpText = "Dropbox doesn't support emoji in filenames.\n"
-                + "This switch replaces them with \"_\"."
+            HelpText = "Dropbox doesn't support emoji in filenames.\n" + "This switch removes them."
         )]
-        public bool ReplaceEmoji { get; set; } = false;
+        public bool RemoveEmoji { get; set; } = false;
 
         public static Task PrintUsage(IEnumerable<Error> errors)
         {
