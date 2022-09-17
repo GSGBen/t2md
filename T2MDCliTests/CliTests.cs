@@ -215,10 +215,49 @@ namespace GoldenSyrupGames.T2MD.Tests
 
             var output = new Dictionary<ITrelloCommon, string>() { { list1, "1" }, { list2, "2" } };
 
-            var options = new CliOptions() { RemoveEmoji = true };
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 40, RemoveEmoji = true };
             var listSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(listSuffixes, output);
+        }
+
+        [TestMethod]
+        public void GetUsableCardName_PrecedingTrailingInnerDoubleSpaces_TrimmedAndRemoved()
+        {
+            var card = new TrelloCardModel() { Name = " card  title " };
+
+            string expectedOutput = "card title";
+
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 40 };
+            string actualOutput = Cli.GetUsableCardName(card, options);
+
+            Assert.AreEqual(expectedOutput, actualOutput);
+        }
+
+        [TestMethod]
+        public void GetUsableListName_PrecedingTrailingInnerDoubleSpaces_TrimmedAndRemoved()
+        {
+            var list = new TrelloListModel() { Name = " list  title " };
+
+            string expectedOutput = "list title";
+
+            var options = new CliOptions();
+            string actualOutput = Cli.GetUsableListName(list, options);
+
+            Assert.AreEqual(expectedOutput, actualOutput);
+        }
+
+        [TestMethod]
+        public void GetUsableBoardName_PrecedingTrailingInnerDoubleSpaces_TrimmedAndRemoved()
+        {
+            var board = new TrelloApiBoardModel() { Name = " board  title " };
+
+            string expectedOutput = "board title";
+
+            var options = new CliOptions();
+            string actualOutput = Cli.GetUsableBoardName(board, options);
+
+            Assert.AreEqual(expectedOutput, actualOutput);
         }
     }
 }

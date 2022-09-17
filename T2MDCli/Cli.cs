@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace GoldenSyrupGames.T2MD
 {
@@ -366,9 +367,12 @@ namespace GoldenSyrupGames.T2MD
         /// <summary>
         /// Returns the name of the board with any filesystem-incompatible characters removed.
         /// <para />
+        /// Trims preceding and trailing whitespace to avoid Windows being unable to use the folder
+        /// (and to neaten things up). <para />
+        /// Replaces multiple whitespace with a single space (usually from removing emoji). <para />
         /// If specified in options, emoji are removed here as well.
         /// </summary>
-        private static string GetUsableBoardName(
+        public static string GetUsableBoardName(
             TrelloApiBoardModel trelloApiBoard,
             CliOptions options
         )
@@ -378,6 +382,9 @@ namespace GoldenSyrupGames.T2MD
             {
                 usableBoardName = Emoji.ReplaceEmoji(usableBoardName, "");
             }
+            usableBoardName = usableBoardName.Trim();
+            Regex multipleSpaces = new Regex("\\s+");
+            usableBoardName = multipleSpaces.Replace(usableBoardName, " ");
             return usableBoardName;
         }
 
@@ -518,15 +525,21 @@ namespace GoldenSyrupGames.T2MD
         /// <summary>
         /// Returns the name of the list with any filesystem-incompatible characters removed.
         /// <para />
+        /// Trims preceding and trailing whitespace to avoid Windows being unable to use the folder
+        /// (and to neaten things up). <para />
+        /// Replaces multiple whitespace with a single space (usually from removing emoji). <para />
         /// If specified in options, emoji are removed here as well.
         /// </summary>
-        private static string GetUsableListName(TrelloListModel trelloList, CliOptions options)
+        public static string GetUsableListName(TrelloListModel trelloList, CliOptions options)
         {
             string usableListName = FileSystem.SanitiseForPath(trelloList.Name);
             if (options.RemoveEmoji)
             {
                 usableListName = Emoji.ReplaceEmoji(usableListName, "");
             }
+            usableListName = usableListName.Trim();
+            Regex multipleSpaces = new Regex("\\s+");
+            usableListName = multipleSpaces.Replace(usableListName, " ");
             return usableListName;
         }
 
@@ -645,9 +658,12 @@ namespace GoldenSyrupGames.T2MD
         /// <summary>
         /// Returns the name of the card limited to the length specified by the user and with any
         /// filesystem-incompatible characters removed. <para />
+        /// Trims preceding and trailing whitespace to avoid Windows being unable to use the folder
+        /// (and to neaten things up). <para />
+        /// Replaces multiple whitespace with a single space (usually from removing emoji). <para />
         /// If specified in options, emoji are removed here as well.
         /// </summary>
-        private static string GetUsableCardName(TrelloCardModel trelloCard, CliOptions options)
+        public static string GetUsableCardName(TrelloCardModel trelloCard, CliOptions options)
         {
             int actualOrRestrictedLength = Math.Min(
                 trelloCard.Name.Length,
@@ -661,7 +677,9 @@ namespace GoldenSyrupGames.T2MD
             {
                 usableCardName = Emoji.ReplaceEmoji(usableCardName, "");
             }
-
+            usableCardName = usableCardName.Trim();
+            Regex multipleSpaces = new Regex("\\s+");
+            usableCardName = multipleSpaces.Replace(usableCardName, " ");
             return usableCardName;
         }
 
