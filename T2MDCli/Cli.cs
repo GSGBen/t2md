@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace GoldenSyrupGames.T2MD
 {
@@ -230,8 +231,10 @@ namespace GoldenSyrupGames.T2MD
             List<TrelloActionModel> boardComments = await GetBoardCommentsAsync(trelloApiBoard.ID);
 
             // write the json to file (overwrite).
+
             // without this linux will happily write /'s
-            string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
+            string usableBoardName = GetUsableBoardName(trelloApiBoard, options);
+
             string boardOutputFilePath = Path.Combine(_outputPath, $"{usableBoardName}.json");
             using FileStream fileStream = File.Create(boardOutputFilePath);
             using Stream contentStream = await response.Content
@@ -272,7 +275,7 @@ namespace GoldenSyrupGames.T2MD
             // differentiate duplicate list names
             Dictionary<ITrelloCommon, string> duplicateSuffixes = GetDuplicateSuffixes(
                 orderedLists,
-                options.MaxCardFilenameTitleLength
+                options
             );
 
             // create folders for each list.
@@ -306,7 +309,7 @@ namespace GoldenSyrupGames.T2MD
             // cards will become files and that makes the most sense for the user
             Dictionary<ITrelloCommon, string> duplicateCardSuffixes = GetDuplicateSuffixes(
                 orderedCards,
-                options.MaxCardFilenameTitleLength
+                options
             );
 
             // process each card
@@ -359,6 +362,30 @@ namespace GoldenSyrupGames.T2MD
             await Task.WhenAll(CardTasks);
 
             AnsiConsole.MarkupLine($"    [green]Finished {trelloApiBoard.Name}[/]");
+        }
+
+        /// <summary>
+        /// Returns the name of the board with any filesystem-incompatible characters removed.
+        /// <para />
+        /// Trims preceding and trailing whitespace to avoid Windows being unable to use the folder
+        /// (and to neaten things up). <para />
+        /// Replaces multiple whitespace with a single space (usually from removing emoji). <para />
+        /// If specified in options, emoji are removed here as well.
+        /// </summary>
+        public static string GetUsableBoardName(
+            TrelloApiBoardModel trelloApiBoard,
+            CliOptions options
+        )
+        {
+            string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
+            if (options.RemoveEmoji)
+            {
+                usableBoardName = Emoji.ReplaceEmoji(usableBoardName, "");
+            }
+            usableBoardName = usableBoardName.Trim();
+            Regex multipleSpaces = new Regex("\\s+");
+            usableBoardName = multipleSpaces.Replace(usableBoardName, " ");
+            return usableBoardName;
         }
 
         /// <summary>
@@ -466,7 +493,7 @@ namespace GoldenSyrupGames.T2MD
 
             // create a folder for each list.
             // remove special characters
-            string usableListName = FileSystem.SanitiseForPath(trelloList.Name);
+            string usableListName = GetUsableListName(trelloList, options);
             if (options.NoNumbering && !string.IsNullOrEmpty(duplicateDifferentiator))
             {
                 usableListName += $" {duplicateDifferentiator}";
@@ -493,6 +520,27 @@ namespace GoldenSyrupGames.T2MD
             {
                 nonArchivedListIndex++;
             }
+        }
+
+        /// <summary>
+        /// Returns the name of the list with any filesystem-incompatible characters removed.
+        /// <para />
+        /// Trims preceding and trailing whitespace to avoid Windows being unable to use the folder
+        /// (and to neaten things up). <para />
+        /// Replaces multiple whitespace with a single space (usually from removing emoji). <para />
+        /// If specified in options, emoji are removed here as well.
+        /// </summary>
+        public static string GetUsableListName(TrelloListModel trelloList, CliOptions options)
+        {
+            string usableListName = FileSystem.SanitiseForPath(trelloList.Name);
+            if (options.RemoveEmoji)
+            {
+                usableListName = Emoji.ReplaceEmoji(usableListName, "");
+            }
+            usableListName = usableListName.Trim();
+            Regex multipleSpaces = new Regex("\\s+");
+            usableListName = multipleSpaces.Replace(usableListName, " ");
+            return usableListName;
         }
 
         /// <summary>
@@ -528,10 +576,7 @@ namespace GoldenSyrupGames.T2MD
         {
             // restrict the maximum filename length for all files. Just via the title, not any
             // suffix or prefix
-            string usableCardName = GetUsableCardName(
-                trelloCard,
-                options.MaxCardFilenameTitleLength
-            );
+            string usableCardName = GetUsableCardName(trelloCard, options);
 
             if (options.NoNumbering && !string.IsNullOrEmpty(duplicateDifferentiator))
             {
@@ -612,21 +657,29 @@ namespace GoldenSyrupGames.T2MD
 
         /// <summary>
         /// Returns the name of the card limited to the length specified by the user and with any
-        /// special characters removed.
+        /// filesystem-incompatible characters removed. <para />
+        /// Trims preceding and trailing whitespace to avoid Windows being unable to use the folder
+        /// (and to neaten things up). <para />
+        /// Replaces multiple whitespace with a single space (usually from removing emoji). <para />
+        /// If specified in options, emoji are removed here as well.
         /// </summary>
-        private static string GetUsableCardName(
-            TrelloCardModel trelloCard,
-            int maxCardFilenameTitleLength
-        )
+        public static string GetUsableCardName(TrelloCardModel trelloCard, CliOptions options)
         {
             int actualOrRestrictedLength = Math.Min(
                 trelloCard.Name.Length,
-                maxCardFilenameTitleLength
+                options.MaxCardFilenameTitleLength
             );
             string usableCardName = trelloCard.Name.Substring(0, actualOrRestrictedLength);
-            // remove special characters
+            // remove special filesystem characters
             usableCardName = FileSystem.SanitiseForPath(usableCardName);
-
+            // remove emoji if specified
+            if (options.RemoveEmoji)
+            {
+                usableCardName = Emoji.ReplaceEmoji(usableCardName, "");
+            }
+            usableCardName = usableCardName.Trim();
+            Regex multipleSpaces = new Regex("\\s+");
+            usableCardName = multipleSpaces.Replace(usableCardName, " ");
             return usableCardName;
         }
 
@@ -1058,7 +1111,7 @@ namespace GoldenSyrupGames.T2MD
         /// <returns></returns>
         public static Dictionary<ITrelloCommon, string> GetDuplicateSuffixes(
             IEnumerable<ITrelloCommon> potentialDuplicates,
-            int maxCardFilenameTitleLength
+            CliOptions options
         )
         {
             var output = new Dictionary<ITrelloCommon, string>();
@@ -1068,7 +1121,7 @@ namespace GoldenSyrupGames.T2MD
 
             foreach (ITrelloCommon potentialDuplicate in potentialDuplicates)
             {
-                string name = GetDuplicateNameKey(potentialDuplicate, maxCardFilenameTitleLength);
+                string name = GetDuplicateNameKey(potentialDuplicate, options);
                 // increment how many times we've seen this name.
                 int count;
                 // if in there, grab the current value, then increment it.
@@ -1094,7 +1147,7 @@ namespace GoldenSyrupGames.T2MD
             string oneAsString = 1.ToString();
             foreach ((ITrelloCommon entry, string suffix) in output)
             {
-                string name = GetDuplicateNameKey(entry, maxCardFilenameTitleLength);
+                string name = GetDuplicateNameKey(entry, options);
                 if (suffix == oneAsString && occurrences[name] == 1)
                 {
                     output[entry] = "";
@@ -1105,14 +1158,12 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
-        /// Generates the card/list name key used in GetDuplicateSuffixes() so that card names are
-        /// only differentiated within each list. <para />
-        /// For lists (or other non-cards) the list name is returned unchanged. <para />
-        /// For cards the list ID is appended to the card name.
+        /// Generates the card/list name key used in GetDuplicateSuffixes(). <para/>
+        /// Card names are differentiated within each list. <para />
         /// </summary>
         private static string GetDuplicateNameKey(
             ITrelloCommon potentialDuplicate,
-            int maxCardFilenameTitleLength
+            CliOptions options
         )
         {
             // notes: `as` returns null if the cast fails, casting (prefixing with `(type)`) throws
@@ -1127,14 +1178,19 @@ namespace GoldenSyrupGames.T2MD
                 // - compare case insensitive. We want to write the original case to disk (so it's
                 //   not in `GetUsableCardName()`) but still avoid overwriting a different one
                 //   that's already been written on case-insensitive systems
-                string usableCardName = GetUsableCardName(card, maxCardFilenameTitleLength)
-                    .ToLower();
+                string usableCardName = GetUsableCardName(card, options).ToLower();
                 return usableCardName + card.IDList;
             }
-            else
+
+            var list = potentialDuplicate as TrelloListModel;
+            if (list != null)
             {
-                return potentialDuplicate.Name.ToLower();
+                string usableListName = GetUsableListName(list, options).ToLower();
+                return usableListName;
             }
+
+            // else
+            return potentialDuplicate.Name.ToLower();
         }
     }
 }

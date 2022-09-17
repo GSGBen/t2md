@@ -73,7 +73,8 @@ namespace GoldenSyrupGames.T2MD.Tests
                 { card3, "2" }
             };
 
-            var cardSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 20 };
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
@@ -97,7 +98,8 @@ namespace GoldenSyrupGames.T2MD.Tests
                 { card3, "3" }
             };
 
-            var cardSuffixes = Cli.GetDuplicateSuffixes(input, 2);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 2 };
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
@@ -115,7 +117,24 @@ namespace GoldenSyrupGames.T2MD.Tests
 
             var output = new Dictionary<ITrelloCommon, string>() { { card1, "1" }, { card2, "2" } };
 
-            var cardSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 20 };
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, options);
+
+            CollectionAssert.AreEquivalent(cardSuffixes, output);
+        }
+
+        [TestMethod]
+        public void GetDuplicateSuffixes_CardsEmojiRemoveEmoji_ReturnsCorrectSuffixes()
+        {
+            var card1 = new TrelloCardModel() { Name = "Card 💪", IDList = "1" };
+            var card2 = new TrelloCardModel() { Name = "Card ❤", IDList = "1" };
+
+            var input = new TrelloCardModel[] { card1, card2, };
+
+            var output = new Dictionary<ITrelloCommon, string>() { { card1, "1" }, { card2, "2" } };
+
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 20, RemoveEmoji = true };
+            var cardSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
@@ -136,7 +155,8 @@ namespace GoldenSyrupGames.T2MD.Tests
                 { List3, "2" }
             };
 
-            var ListSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 20 };
+            var ListSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(ListSuffixes, output);
         }
@@ -160,7 +180,8 @@ namespace GoldenSyrupGames.T2MD.Tests
                 { List3, "2" }
             };
 
-            var ListSuffixes = Cli.GetDuplicateSuffixes(input, 2);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 2 };
+            var ListSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(ListSuffixes, output);
         }
@@ -178,9 +199,65 @@ namespace GoldenSyrupGames.T2MD.Tests
 
             var output = new Dictionary<ITrelloCommon, string>() { { List1, "1" }, { List2, "2" } };
 
-            var ListSuffixes = Cli.GetDuplicateSuffixes(input, 20);
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 20 };
+            var ListSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(ListSuffixes, output);
+        }
+
+        [TestMethod]
+        public void GetDuplicateSuffixes_ListsEmojiRemoveEmoji_ReturnsCorrectSuffixes()
+        {
+            var list1 = new TrelloListModel() { Name = "List 💪" };
+            var list2 = new TrelloListModel() { Name = "List ❤" };
+
+            var input = new TrelloListModel[] { list1, list2, };
+
+            var output = new Dictionary<ITrelloCommon, string>() { { list1, "1" }, { list2, "2" } };
+
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 40, RemoveEmoji = true };
+            var listSuffixes = Cli.GetDuplicateSuffixes(input, options);
+
+            CollectionAssert.AreEquivalent(listSuffixes, output);
+        }
+
+        [TestMethod]
+        public void GetUsableCardName_PrecedingTrailingInnerDoubleSpaces_TrimmedAndRemoved()
+        {
+            var card = new TrelloCardModel() { Name = " card  title " };
+
+            string expectedOutput = "card title";
+
+            var options = new CliOptions() { MaxCardFilenameTitleLength = 40 };
+            string actualOutput = Cli.GetUsableCardName(card, options);
+
+            Assert.AreEqual(expectedOutput, actualOutput);
+        }
+
+        [TestMethod]
+        public void GetUsableListName_PrecedingTrailingInnerDoubleSpaces_TrimmedAndRemoved()
+        {
+            var list = new TrelloListModel() { Name = " list  title " };
+
+            string expectedOutput = "list title";
+
+            var options = new CliOptions();
+            string actualOutput = Cli.GetUsableListName(list, options);
+
+            Assert.AreEqual(expectedOutput, actualOutput);
+        }
+
+        [TestMethod]
+        public void GetUsableBoardName_PrecedingTrailingInnerDoubleSpaces_TrimmedAndRemoved()
+        {
+            var board = new TrelloApiBoardModel() { Name = " board  title " };
+
+            string expectedOutput = "board title";
+
+            var options = new CliOptions();
+            string actualOutput = Cli.GetUsableBoardName(board, options);
+
+            Assert.AreEqual(expectedOutput, actualOutput);
         }
     }
 }
