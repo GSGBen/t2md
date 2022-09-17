@@ -466,7 +466,7 @@ namespace GoldenSyrupGames.T2MD
 
             // create a folder for each list.
             // remove special characters
-            string usableListName = FileSystem.SanitiseForPath(trelloList.Name);
+            string usableListName = GetUsableListName(trelloList, options);
             if (options.NoNumbering && !string.IsNullOrEmpty(duplicateDifferentiator))
             {
                 usableListName += $" {duplicateDifferentiator}";
@@ -493,6 +493,21 @@ namespace GoldenSyrupGames.T2MD
             {
                 nonArchivedListIndex++;
             }
+        }
+
+        /// <summary>
+        /// Returns the name of the list with any filesystem-incompatible characters removed.
+        /// <para />
+        /// If specified in options, emoji are removed here as well.
+        /// </summary>
+        private static string GetUsableListName(TrelloListModel trelloList, CliOptions options)
+        {
+            string usableListName = FileSystem.SanitiseForPath(trelloList.Name);
+            if (options.RemoveEmoji)
+            {
+                usableListName = Emoji.ReplaceEmoji(usableListName, "");
+            }
+            return usableListName;
         }
 
         /// <summary>
@@ -1105,10 +1120,8 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
-        /// Generates the card/list name key used in GetDuplicateSuffixes() so that card names are
-        /// only differentiated within each list. <para />
-        /// For lists (or other non-cards) the list name is returned unchanged. <para />
-        /// For cards the list ID is appended to the card name.
+        /// Generates the card/list name key used in GetDuplicateSuffixes(). <para/>
+        /// Card names are differentiated within each list. <para />
         /// </summary>
         private static string GetDuplicateNameKey(
             ITrelloCommon potentialDuplicate,
@@ -1130,10 +1143,16 @@ namespace GoldenSyrupGames.T2MD
                 string usableCardName = GetUsableCardName(card, options).ToLower();
                 return usableCardName + card.IDList;
             }
-            else
+
+            var list = potentialDuplicate as TrelloListModel;
+            if (list != null)
             {
-                return potentialDuplicate.Name.ToLower();
+                string usableListName = GetUsableListName(list, options).ToLower();
+                return usableListName;
             }
+
+            // else
+            return potentialDuplicate.Name.ToLower();
         }
     }
 }

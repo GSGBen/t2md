@@ -123,9 +123,6 @@ namespace GoldenSyrupGames.T2MD.Tests
             CollectionAssert.AreEquivalent(cardSuffixes, output);
         }
 
-        /// <summary>
-        /// Test the issue of cards that are unique when full length but the same when truncated.
-        /// </summary>
         [TestMethod]
         public void GetDuplicateSuffixes_CardsEmojiRemoveEmoji_ReturnsCorrectSuffixes()
         {
@@ -206,6 +203,22 @@ namespace GoldenSyrupGames.T2MD.Tests
             var ListSuffixes = Cli.GetDuplicateSuffixes(input, options);
 
             CollectionAssert.AreEquivalent(ListSuffixes, output);
+        }
+
+        [TestMethod]
+        public void GetDuplicateSuffixes_ListsEmojiRemoveEmoji_ReturnsCorrectSuffixes()
+        {
+            var list1 = new TrelloListModel() { Name = "List 💪" };
+            var list2 = new TrelloListModel() { Name = "List ❤" };
+
+            var input = new TrelloListModel[] { list1, list2, };
+
+            var output = new Dictionary<ITrelloCommon, string>() { { list1, "1" }, { list2, "2" } };
+
+            var options = new CliOptions() { RemoveEmoji = true };
+            var listSuffixes = Cli.GetDuplicateSuffixes(input, options);
+
+            CollectionAssert.AreEquivalent(listSuffixes, output);
         }
     }
 }
