@@ -232,11 +232,7 @@ namespace GoldenSyrupGames.T2MD
             // write the json to file (overwrite).
 
             // without this linux will happily write /'s
-            string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
-            if (options.RemoveEmoji)
-            {
-                usableBoardName = Emoji.ReplaceEmoji(usableBoardName, "");
-            }
+            string usableBoardName = GetUsableBoardName(trelloApiBoard, options);
 
             string boardOutputFilePath = Path.Combine(_outputPath, $"{usableBoardName}.json");
             using FileStream fileStream = File.Create(boardOutputFilePath);
@@ -365,6 +361,24 @@ namespace GoldenSyrupGames.T2MD
             await Task.WhenAll(CardTasks);
 
             AnsiConsole.MarkupLine($"    [green]Finished {trelloApiBoard.Name}[/]");
+        }
+
+        /// <summary>
+        /// Returns the name of the board with any filesystem-incompatible characters removed.
+        /// <para />
+        /// If specified in options, emoji are removed here as well.
+        /// </summary>
+        private static string GetUsableBoardName(
+            TrelloApiBoardModel trelloApiBoard,
+            CliOptions options
+        )
+        {
+            string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
+            if (options.RemoveEmoji)
+            {
+                usableBoardName = Emoji.ReplaceEmoji(usableBoardName, "");
+            }
+            return usableBoardName;
         }
 
         /// <summary>
