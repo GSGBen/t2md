@@ -1289,6 +1289,10 @@ namespace GoldenSyrupGames.T2MD
             CliOptions options
         )
         {
+            // archived and non-archived are in separate folders so we don't want to deduplicate
+            // between archived and non-archived cards with the same name
+            string archivedString = potentialDuplicate.Closed ? "archived" : "";
+
             // notes: `as` returns null if the cast fails, casting (prefixing with `(type)`) throws
             // an exception if the cast fails
             var card = potentialDuplicate as TrelloCardModel;
@@ -1302,18 +1306,18 @@ namespace GoldenSyrupGames.T2MD
                 //   not in `GetUsableCardName()`) but still avoid overwriting a different one
                 //   that's already been written on case-insensitive systems
                 string usableCardName = GetUsableCardName(card, options).ToLower();
-                return usableCardName + card.IDList;
+                return usableCardName + card.IDList + archivedString;
             }
 
             var list = potentialDuplicate as TrelloListModel;
             if (list != null)
             {
                 string usableListName = GetUsableListName(list, options).ToLower();
-                return usableListName;
+                return usableListName + archivedString;
             }
 
             // else
-            return potentialDuplicate.Name.ToLower();
+            return potentialDuplicate.Name.ToLower() + archivedString;
         }
     }
 }

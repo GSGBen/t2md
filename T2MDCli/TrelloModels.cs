@@ -12,6 +12,11 @@ namespace GoldenSyrupGames.T2MD
     public interface ITrelloCommon
     {
         public string Name { get; set; }
+
+        /// <summary>
+        /// archived
+        /// </summary>
+        public bool Closed { get; set; }
     }
 
     /// <summary>
@@ -24,6 +29,11 @@ namespace GoldenSyrupGames.T2MD
         public string Name { get; set; } = "";
         public string ShortLink { get; set; } = "";
         public string ID { get; set; } = "";
+
+        /// <summary>
+        /// archived
+        /// </summary>
+        public bool Closed { get; set; } = false;
 
         // workaround for no Required attribute. Returns true if we have data in fields that should
         // always have data
@@ -55,6 +65,11 @@ namespace GoldenSyrupGames.T2MD
         public List<TrelloChecklistModel> Checklists { get; set; } =
             new List<TrelloChecklistModel>();
         public List<TrelloActionModel> Actions { get; set; } = new List<TrelloActionModel>();
+
+        /// <summary>
+        /// archived
+        /// </summary>
+        public bool Closed { get; set; } = false;
 
         // workaround for no Required attribute. Returns true if we have data in fields that should
         // always have data
