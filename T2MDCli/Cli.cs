@@ -40,7 +40,7 @@ namespace GoldenSyrupGames.T2MD
 
         static async Task Main(string[] args)
         {
-            // get commandline arguments based on Options, otherwise fail and print help.
+            // get commandline arguments based on CliOptions, otherwise fail and print help.
             await Parser.Default
                 .ParseArguments<CliOptions>(args)
                 .MapResult(
@@ -545,7 +545,7 @@ namespace GoldenSyrupGames.T2MD
 
         /// <summary>
         /// Creates a markdown file each for the board's description, comments, checklists and list
-        /// of attachments. <para/>
+        /// of attachments. If specified in `options`, only a singe card is created. <para/>
         /// Downloads all attachments. <para/>
         /// Replaces references to the attachment URLs with the new relative ones in the
         /// description and comments. <para/>
@@ -574,14 +574,22 @@ namespace GoldenSyrupGames.T2MD
             string duplicateDifferentiator
         )
         {
-            // restrict the maximum filename length for all files. Just via the title, not any
-            // suffix or prefix
+            // get a version of the card title with user-limited length that's safe to use for a
+            // filename
             string usableCardName = GetUsableCardName(trelloCard, options);
 
             if (options.NoNumbering && !string.IsNullOrEmpty(duplicateDifferentiator))
             {
                 usableCardName += $" {duplicateDifferentiator}";
             }
+
+            // save the path and contents of the description and comment files so we can
+            // find/replace URLs in them
+            string descriptionContents,
+                descriptionPath,
+                commentsContents,
+                commentsPath;
+            descriptionContents = descriptionPath = commentsContents = commentsPath = String.Empty;
 
             // write the description to a markdown file
             Task<(string, string)> WriteCardDescriptionTask = WriteCardDescriptionAsync(
@@ -592,24 +600,22 @@ namespace GoldenSyrupGames.T2MD
                 options
             );
 
-            // write the checklists to a file if there are any
-            Task WriteCardChecklistsTask = WriteCardChecklistsAsync(
-                trelloCard,
-                trelloBoard,
-                cardFolderPath,
-                cardIndex,
-                usableCardName,
-                options
-            );
+            // if we're writing to only one file ensure only one thread is writing to the file at
+            // the same time so wait for the description to finish
+            if (options.SingleFile)
+            {
+                (_, descriptionPath) = await WriteCardDescriptionTask;
+            }
 
-            // download uploaded attachments if there are any. Only direct file uploads or image
-            // data pastes, not e.g. pasted http links
+            // download uploaded attachments if there are any and list them in a markdown file. Only
+            // direct file uploads or image data pastes, not e.g. pasted http links
             IEnumerable<TrelloAttachmentModel> uploadedAttachments = trelloCard.Attachments.Where(
                 attachment => attachment.IsUpload
             );
+            Task? downloadAttachmentsTask = null;
             if (uploadedAttachments.Count() > 0)
             {
-                await DownloadTrelloCardAttachmentsAsync(
+                downloadAttachmentsTask = DownloadTrelloCardAttachmentsAsync(
                     uploadedAttachments,
                     trelloCard,
                     cardIndex,
@@ -618,8 +624,30 @@ namespace GoldenSyrupGames.T2MD
                     options.IgnoreFailedAttachmentDownloads,
                     options.AlwaysUseForwardSlashes,
                     trelloBoard.Name,
-                    options
+                    options,
+                    descriptionPath
                 );
+            }
+
+            if (options.SingleFile && downloadAttachmentsTask != null)
+            {
+                await downloadAttachmentsTask;
+            }
+
+            // write the checklists to a file if there are any
+            Task WriteCardChecklistsTask = WriteCardChecklistsAsync(
+                trelloCard,
+                trelloBoard,
+                cardFolderPath,
+                cardIndex,
+                usableCardName,
+                options,
+                descriptionPath
+            );
+
+            if (options.SingleFile)
+            {
+                await WriteCardChecklistsTask;
             }
 
             // get only this card's comments
@@ -635,24 +663,43 @@ namespace GoldenSyrupGames.T2MD
                 cardIndex,
                 usableCardName,
                 options,
-                cardComments
+                cardComments,
+                descriptionPath
             );
 
-            // save the path and contents of the description and comment files so we can
-            // find/replace URLs in them
-            (string descriptionContents, string descriptionPath) = await WriteCardDescriptionTask;
-            (string commentsContents, string commentsPath) = await WriteCardCommentsTask;
-            await WriteCardChecklistsTask;
+            if (options.SingleFile)
+            {
+                (_, commentsPath) = await WriteCardCommentsTask;
+            }
 
-            // replace full http attachment URLs with local relative paths so the description and
-            // comments now link to the downloaded copies.
-            await UpdateAttachmentReferencesAsync(
-                uploadedAttachments,
-                descriptionContents,
-                descriptionPath,
-                commentsContents,
-                commentsPath
-            );
+            // if we're writing to separate files, allow them all to write at once above and wait
+            // for them all here
+            if (!options.SingleFile)
+            {
+                Task.WaitAll(
+                    WriteCardDescriptionTask,
+                    WriteCardCommentsTask,
+                    WriteCardChecklistsTask
+                );
+                (_, descriptionPath) = WriteCardDescriptionTask.Result;
+                (_, commentsPath) = WriteCardCommentsTask.Result;
+
+                if (downloadAttachmentsTask != null)
+                {
+                    await downloadAttachmentsTask;
+                }
+            }
+
+            if (downloadAttachmentsTask != null)
+            {
+                // replace full http attachment URLs with local relative paths so the description
+                // and comments now link to the downloaded copies.
+                await UpdateAttachmentReferencesAsync(
+                    uploadedAttachments,
+                    descriptionPath,
+                    commentsPath
+                );
+            }
         }
 
         /// <summary>
@@ -742,6 +789,8 @@ namespace GoldenSyrupGames.T2MD
         /// special characters should be removed already.</param>
         /// <param name="options">The parsed options we received on the commandline from the
         /// user</param>
+        /// <param name="descriptionFilePath">If options.SingleFile is specified, the checklists
+        /// content is instead appended to this file.</param>
         /// <returns></returns>
         private static async Task WriteCardChecklistsAsync(
             TrelloCardModel trelloCard,
@@ -749,7 +798,8 @@ namespace GoldenSyrupGames.T2MD
             string cardFolderPath,
             int cardIndex,
             string usableCardName,
-            CliOptions options
+            CliOptions options,
+            string descriptionFilePath
         )
         {
             // checklists are under the board so retrieve the ones for this card
@@ -758,15 +808,27 @@ namespace GoldenSyrupGames.T2MD
             );
             if (cardChecklists.Count() > 0)
             {
-                // start with a modified title for the whole file
-                var checklistsContents = $"# {trelloCard.Name} - Checklists\n\n";
+                string checklistsContents;
+                if (options.SingleFile)
+                {
+                    // if we're appending to the description file nest it as a second level heading.
+                    // Put it on a separated new line as the description contents might not end with
+                    // one. Add a line separator to try and separate it further
+                    checklistsContents = $"\n\n---\n\n## Checklists\n\n";
+                }
+                else
+                {
+                    // if it's a separate file,  start with a modified title
+                    checklistsContents = $"# {trelloCard.Name} - Checklists\n\n";
+                }
                 // maintain the checklist order in the card
                 IOrderedEnumerable<TrelloChecklistModel> orderedCardChecklists =
                     cardChecklists.OrderBy(checklist => checklist.Pos);
                 foreach (TrelloChecklistModel trelloChecklist in orderedCardChecklists)
                 {
                     // write each checklist title as the next subheading
-                    checklistsContents += $"## {trelloChecklist.Name}\n\n";
+                    string headingPrefix = options.SingleFile ? "###" : "##";
+                    checklistsContents += $"{headingPrefix} {trelloChecklist.Name}\n\n";
                     // write each entry in the checklist
                     foreach (TrelloCheckItemModel checkItem in trelloChecklist.CheckItems)
                     {
@@ -776,13 +838,21 @@ namespace GoldenSyrupGames.T2MD
                     }
                     checklistsContents += "\n";
                 }
+
                 // write the file
-                var checklistsFilename = options.NoNumbering
-                    ? $"{usableCardName} - Checklists.md"
-                    : $"{cardIndex} {usableCardName} - Checklists.md";
-                string checklistsPath = Path.Join(cardFolderPath, checklistsFilename);
-                await File.WriteAllTextAsync(checklistsPath, checklistsContents)
-                    .ConfigureAwait(false);
+                string outputPath;
+                if (options.SingleFile)
+                {
+                    outputPath = descriptionFilePath;
+                }
+                else
+                {
+                    var checklistsFilename = options.NoNumbering
+                        ? $"{usableCardName} - Checklists.md"
+                        : $"{cardIndex} {usableCardName} - Checklists.md";
+                    outputPath = Path.Join(cardFolderPath, checklistsFilename);
+                }
+                await File.AppendAllTextAsync(outputPath, checklistsContents).ConfigureAwait(false);
             }
         }
 
@@ -802,6 +872,10 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="options">The parsed options we received on the commandline from the
         /// user</param>
         /// <param name="commentActions">The comments to write to the file.</param>
+        /// <param name="descriptionFilePath">If options.SingleFile is specified, the checklists
+        /// content is instead appended to this file.</param>
+        /// <param name="descriptionFilePath">If options.SingleFile is specified, the checklists
+        /// content is instead appended to this file.</param>
         /// <returns>Returns the markdown contents of the comments file in the first tuple member
         /// and the path to it in the second.</returns>
         private static async Task<(string, string)> WriteCardCommentsAsync(
@@ -811,13 +885,26 @@ namespace GoldenSyrupGames.T2MD
             int cardIndex,
             string usableCardName,
             CliOptions options,
-            List<TrelloActionModel> cardComments
+            List<TrelloActionModel> cardComments,
+            string descriptionFilePath
         )
         {
             if (cardComments.Count() > 0)
             {
-                // start with a modified title for the whole file
-                var commentsContents = $"# {trelloCard.Name} - Comments\n\n";
+                string commentsContents;
+                if (options.SingleFile)
+                {
+                    // if we're appending to the description file nest it as a second level heading.
+                    // Put it on a separated new line as the description contents might not end with
+                    // one. Add a line separator to try and separate it further
+                    commentsContents = $"\n\n---\n\n## Comments\n\n";
+                }
+                else
+                {
+                    // if it's a separate file, start with a modified title
+                    commentsContents = $"# {trelloCard.Name} - Comments\n\n";
+                }
+
                 // order the comments by date. ISO 8601 dates can be sorted as a string
                 IOrderedEnumerable<TrelloActionModel> orderedCardComments = cardComments.OrderBy(
                     comment => comment.Date
@@ -825,27 +912,37 @@ namespace GoldenSyrupGames.T2MD
                 foreach (TrelloActionModel trelloComment in orderedCardComments)
                 {
                     // separate each card's contents
-                    commentsContents += "## " + new string('-', 40) + "\n\n";
+                    string headingPrefix = options.SingleFile ? "###" : "##";
+                    commentsContents += $"{headingPrefix} " + new string('-', 40) + "\n\n";
                     //commentsContents += "## " + new string('-', 10) + $"Comment on
                     //{trelloComment.Date}" + new string('-', 10) + "\n\n";
 
                     commentsContents += trelloComment.Data.Text;
                     commentsContents += "\n\n";
                 }
+
                 // write the file
-                var commentsFilename = options.NoNumbering
-                    ? $"{usableCardName} - Comments.md"
-                    : $"{cardIndex} {usableCardName} - Comments.md";
-                var commentsPath = Path.Join(cardFolderPath, commentsFilename);
-                await File.WriteAllTextAsync(commentsPath, commentsContents).ConfigureAwait(false);
-                return (commentsContents, commentsPath);
+                string outputPath;
+                if (options.SingleFile)
+                {
+                    outputPath = descriptionFilePath;
+                }
+                else
+                {
+                    var commentsFilename = options.NoNumbering
+                        ? $"{usableCardName} - Comments.md"
+                        : $"{cardIndex} {usableCardName} - Comments.md";
+                    outputPath = Path.Join(cardFolderPath, commentsFilename);
+                }
+                await File.AppendAllTextAsync(outputPath, commentsContents).ConfigureAwait(false);
+                return (commentsContents, outputPath);
             }
             // else
             return ("", "");
         }
 
         /// <summary>
-        /// Download attachments for this card if there are any.
+        /// Download attachments for this card if there are any and record them in a markdown table.
         /// </summary>
         /// <param name="uploadedAttachments">The models of the attachments for this card parsed
         /// from the json backup.</param>
@@ -862,6 +959,8 @@ namespace GoldenSyrupGames.T2MD
         /// forward slashes.</param>
         /// <param name="boardName">The name of the board this attachment is in a card under, for
         /// logging.</param>
+        /// <param name="descriptionFilePath">If options.SingleFile is specified, the checklists
+        /// content is instead appended to this file.</param>
         /// <returns></returns>
         private static async Task DownloadTrelloCardAttachmentsAsync(
             IEnumerable<TrelloAttachmentModel> uploadedAttachments,
@@ -872,7 +971,8 @@ namespace GoldenSyrupGames.T2MD
             bool ignoreFailedAttachmentDownloads,
             bool alwaysUseForwardSlashes,
             string boardName,
-            CliOptions options
+            CliOptions options,
+            string descriptionFilePath
         )
         {
             if (uploadedAttachments.Count() > 0)
@@ -884,13 +984,24 @@ namespace GoldenSyrupGames.T2MD
                 string attachmentFolderPath = Path.Join(cardFolderPath, attachmentFolderName);
                 Directory.CreateDirectory(attachmentFolderPath);
 
-                // start creating a new markdown file listing all the
-                // attachments, their actual names and paths. a functional but
-                // unformatted markdown table for now
-                var attachmentListContents =
-                    $"# {trelloCard.Name} - Attachments\n\n"
-                    + $"id | original fileName | relative downloaded path\n"
-                    + $"---|---|---\n";
+                string attachmentListContents;
+                if (options.SingleFile)
+                {
+                    // if we're appending to the description file nest it as a second level heading.
+                    // Put it on a separated new line as the description contents might not end with
+                    // one
+                    attachmentListContents = $"\n\n---\n\n## Attachments\n\n";
+                }
+                else
+                {
+                    // if it's a separate file, start with a modified title
+                    attachmentListContents = $"# {trelloCard.Name} - Attachments\n\n";
+                }
+
+                // start listing all the attachments, their actual names and paths. a
+                // functional but unformatted markdown table for now
+                attachmentListContents +=
+                    $"id | original fileName | relative downloaded path\n" + $"---|---|---\n";
 
                 // download all uploaded attachments into that folder
                 var AttachmentDownloadTasks = new List<Task<string>>();
@@ -914,11 +1025,19 @@ namespace GoldenSyrupGames.T2MD
                 attachmentListContents += String.Join("\n", AttachmentTableLines);
 
                 // write the file listing all the attachments
-                var attachmentListFilename = options.NoNumbering
-                    ? $"{usableCardName} - Attachments.md"
-                    : $"{cardIndex} {usableCardName} - Attachments.md";
-                string attachmentListPath = Path.Join(cardFolderPath, attachmentListFilename);
-                await File.WriteAllTextAsync(attachmentListPath, attachmentListContents)
+                string outputPath;
+                if (options.SingleFile)
+                {
+                    outputPath = descriptionFilePath;
+                }
+                else
+                {
+                    var attachmentListFilename = options.NoNumbering
+                        ? $"{usableCardName} - Attachments.md"
+                        : $"{cardIndex} {usableCardName} - Attachments.md";
+                    outputPath = Path.Join(cardFolderPath, attachmentListFilename);
+                }
+                await File.AppendAllTextAsync(outputPath, attachmentListContents)
                     .ConfigureAwait(false);
             }
         }
@@ -1039,32 +1158,32 @@ namespace GoldenSyrupGames.T2MD
         /// </summary>
         /// <param name="uploadedAttachments">The models of the attachments for this card parsed
         /// from the json backup.</param>
-        /// <param name="descriptionContents">Original contents of the markdown file for the
-        /// description.</param>
         /// <param name="descriptionPath">Full path on disk to the description markdown
         /// file.</param>
-        /// <param name="commentsContents">Original contents of the markdown file for the
-        /// comments.</param>
         /// <param name="commentsPath">Full path on disk to the comments markdown file.</param>
         /// <returns></returns>
         private static async Task UpdateAttachmentReferencesAsync(
             IEnumerable<TrelloAttachmentModel> uploadedAttachments,
-            string descriptionContents,
             string descriptionPath,
-            string commentsContents,
             string commentsPath
         )
         {
-            // debug
-            //if (descriptionPath.Contains("nftables"))
-            //{
-            //    Console.WriteLine("nftables");
-            //}
-
             if (uploadedAttachments.Count() > 0)
             {
-                // we're going to and replace and URL references. Do it in a new variable so we can
-                // check if we made any changes
+                string descriptionContents = "";
+                string commentsContents = "";
+                // read the contents from disk again instead of passing in the contents to this
+                // function to support single-file mode
+                if (descriptionPath != "")
+                {
+                    descriptionContents = await File.ReadAllTextAsync(descriptionPath);
+                }
+                if (commentsPath != "")
+                {
+                    commentsContents = await File.ReadAllTextAsync(commentsPath);
+                }
+
+                // Replace in a new variable so we can check if we made any changes
                 string replacedDescriptionContents = descriptionContents;
                 string replacedCommentsContents = commentsContents;
 
@@ -1083,12 +1202,16 @@ namespace GoldenSyrupGames.T2MD
                 }
 
                 // if we replaced any URLs in the description or comments, update them
-                if (replacedDescriptionContents != descriptionContents)
+                if (replacedDescriptionContents != descriptionContents && descriptionPath != "")
                 {
                     await File.WriteAllTextAsync(descriptionPath, replacedDescriptionContents)
                         .ConfigureAwait(false);
                 }
-                if (replacedCommentsContents != commentsContents)
+                if (
+                    replacedCommentsContents != commentsContents
+                    && commentsPath != ""
+                    && commentsPath != descriptionPath
+                )
                 {
                     await File.WriteAllTextAsync(commentsPath, replacedCommentsContents)
                         .ConfigureAwait(false);

@@ -88,6 +88,17 @@ namespace GoldenSyrupGames.T2MD
         )]
         public bool RemoveEmoji { get; set; } = false;
 
+        /// <summary>
+        /// Write checklists, comments and attachments to the description file.
+        /// </summary>
+        [Option(
+            "single-file",
+            Default = false,
+            HelpText = "If specified, checklists, comments and attachments are written to the same"
+                + "file as the description."
+        )]
+        public bool SingleFile { get; set; } = false;
+
         public static Task PrintUsage(IEnumerable<Error> errors)
         {
             Console.WriteLine(
