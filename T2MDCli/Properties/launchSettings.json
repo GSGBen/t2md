@@ -2,7 +2,7 @@
   "profiles": {
     "T2MDCli": {
       "commandName": "Project",
-      "commandLineArgs": "--output-folder .\\t2md-test --no-numbering --remove-emoji --single-file",
+      "commandLineArgs": "--output-folder .\\t2md-test --no-numbering --remove-emoji",
       "workingDirectory": "%userprofile%"
     }
   }
