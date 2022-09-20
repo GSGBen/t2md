@@ -604,7 +604,7 @@ namespace GoldenSyrupGames.T2MD
             // the same time so wait for the description to finish
             if (options.SingleFile)
             {
-                (descriptionContents, descriptionPath) = await WriteCardDescriptionTask;
+                (_, descriptionPath) = await WriteCardDescriptionTask;
             }
 
             // download uploaded attachments if there are any and list them in a markdown file. Only
@@ -669,7 +669,7 @@ namespace GoldenSyrupGames.T2MD
 
             if (options.SingleFile)
             {
-                (commentsContents, commentsPath) = await WriteCardCommentsTask;
+                (_, commentsPath) = await WriteCardCommentsTask;
             }
 
             // if we're writing to separate files, allow them all to write at once above and wait
@@ -681,8 +681,8 @@ namespace GoldenSyrupGames.T2MD
                     WriteCardCommentsTask,
                     WriteCardChecklistsTask
                 );
-                (descriptionContents, descriptionPath) = WriteCardDescriptionTask.Result;
-                (commentsContents, commentsPath) = WriteCardCommentsTask.Result;
+                (_, descriptionPath) = WriteCardDescriptionTask.Result;
+                (_, commentsPath) = WriteCardCommentsTask.Result;
 
                 if (downloadAttachmentsTask != null)
                 {
@@ -696,9 +696,7 @@ namespace GoldenSyrupGames.T2MD
                 // and comments now link to the downloaded copies.
                 await UpdateAttachmentReferencesAsync(
                     uploadedAttachments,
-                    descriptionContents,
                     descriptionPath,
-                    commentsContents,
                     commentsPath
                 );
             }
@@ -1160,26 +1158,32 @@ namespace GoldenSyrupGames.T2MD
         /// </summary>
         /// <param name="uploadedAttachments">The models of the attachments for this card parsed
         /// from the json backup.</param>
-        /// <param name="descriptionContents">Original contents of the markdown file for the
-        /// description.</param>
         /// <param name="descriptionPath">Full path on disk to the description markdown
         /// file.</param>
-        /// <param name="commentsContents">Original contents of the markdown file for the
-        /// comments.</param>
         /// <param name="commentsPath">Full path on disk to the comments markdown file.</param>
         /// <returns></returns>
         private static async Task UpdateAttachmentReferencesAsync(
             IEnumerable<TrelloAttachmentModel> uploadedAttachments,
-            string descriptionContents,
             string descriptionPath,
-            string commentsContents,
             string commentsPath
         )
         {
             if (uploadedAttachments.Count() > 0)
             {
-                // we're going to and replace and URL references. Do it in a new variable so we can
-                // check if we made any changes
+                string descriptionContents = "";
+                string commentsContents = "";
+                // read the contents from disk again instead of passing in the contents to this
+                // function to support single-file mode
+                if (descriptionPath != "")
+                {
+                    descriptionContents = await File.ReadAllTextAsync(descriptionPath);
+                }
+                if (commentsPath != "")
+                {
+                    commentsContents = await File.ReadAllTextAsync(commentsPath);
+                }
+
+                // Replace in a new variable so we can check if we made any changes
                 string replacedDescriptionContents = descriptionContents;
                 string replacedCommentsContents = commentsContents;
 
