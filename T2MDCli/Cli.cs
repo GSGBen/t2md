@@ -151,6 +151,9 @@ namespace GoldenSyrupGames.T2MD
                 );
             }
 
+            // quick testing
+            trelloApiBoards = trelloApiBoards.Where(board => board.Name == "Test\\Board").ToList();
+
             // ensure they all have the required properties (not natively possible with
             // System.Text.Json)
             foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards)
@@ -220,12 +223,6 @@ namespace GoldenSyrupGames.T2MD
             CliOptions options
         )
         {
-            // quick testing
-            //if (trelloApiBoard.Name != "Computers")
-            //{
-            //    return;
-            //}
-
             AnsiConsole.MarkupLine($"    [blue]Starting {trelloApiBoard.Name}[/]");
 
             // - retrieve the full backup of each, the same as "Menu > more > print and export >
@@ -1392,16 +1389,21 @@ namespace GoldenSyrupGames.T2MD
             Dictionary<string, TrelloCardModel> urlCardMap
         )
         {
+            // unique paths only to avoid processing the same file more than once (and at the same
+            // time causing exceptions) in single-file mode
             var paths = new string[]
             {
                 trelloCard.DescriptionPath,
                 trelloCard.CommentsPath,
                 trelloCard.ChecklistsPath
-            };
+            }.Distinct();
+
             var fileTasks = new List<Task>();
             foreach (string path in paths)
             {
-                fileTasks.Add(ReplaceLinksFileAsync(path, options, urlCardMap));
+                fileTasks.Add(
+                    ReplaceLinksFileAsync(path, options, urlCardMap, trelloCard.ShortUrl)
+                );
             }
             await Task.WhenAll(fileTasks);
         }
@@ -1414,18 +1416,31 @@ namespace GoldenSyrupGames.T2MD
         /// it.</param>
         /// <param name="options">cli options from the user.</param>
         /// <param name="urlCardMap">A mapping of card short URLs to card models.</param>
+        /// <param name="thisCardShortUrl">The short URL of the current card we're replacing content
+        /// for (i.e. of the card `path` is for). We won't replace references to this URL, to avoid
+        /// overwriting the "Original URL" line.</param>
         private static async Task ReplaceLinksFileAsync(
             string path,
             CliOptions options,
-            Dictionary<string, TrelloCardModel> urlCardMap
+            Dictionary<string, TrelloCardModel> urlCardMap,
+            string thisCardShortUrl
         )
         {
+            Console.WriteLine(path);
             if (path != "")
             {
                 string content = await File.ReadAllTextAsync(path);
+                string replacedContent = content;
+
                 IEnumerable<string> foundUrls = GetTrelloCardUrlsFromText(content);
                 foreach (string url in foundUrls)
                 {
+                    // don't change the Original URL line at the top of the source card.
+                    if (url.Contains(thisCardShortUrl))
+                    {
+                        continue;
+                    }
+
                     // extract the short code in the format the json delivers it in
                     Match shortUrlMatch = Regex.Match(
                         url,
@@ -1438,7 +1453,33 @@ namespace GoldenSyrupGames.T2MD
                             $"Couldn't extract a short Trello card URL from \"{url}\""
                         );
                     }
+
+                    // find the local path of the target card
                     TrelloCardModel destinationCard = urlCardMap[shortUrlMatch.Value];
+                    string destinationCardPath = destinationCard.DescriptionPath;
+
+                    // get the path from the current file to the target.
+                    // we need to use the current card's folder path, not its file path
+                    string? sourcePath = Path.GetDirectoryName(path);
+                    if (sourcePath == null)
+                    {
+                        throw new Exception("Path.GetDirectoryName(path) returned null");
+                    }
+                    string relativePath = Path.GetRelativePath(sourcePath, destinationCardPath);
+                    if (options.AlwaysUseForwardSlashes)
+                    {
+                        relativePath = relativePath.Replace("\\", "/");
+                    }
+
+                    // replace the links
+                    string localMarkdownLink = $"[{destinationCard.Name}]({relativePath})";
+                    replacedContent = replacedContent.Replace(url, localMarkdownLink);
+                }
+
+                // write it back to disk if we made any changes
+                if (replacedContent != content)
+                {
+                    await File.WriteAllTextAsync(path, replacedContent);
                 }
             }
         }
