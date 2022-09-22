@@ -166,16 +166,42 @@ namespace GoldenSyrupGames.T2MD
         public bool Closed { get; set; } = false;
 
         /// <summary>
-        /// Contains a useful short ID.
+        /// Contains a useful short ID. <para />
+        /// Looks like <c>https://trello.com/c/aaa11bb2</c>. No trailing /.
         /// </summary>
         public string ShortUrl { get; set; } = "";
+
+        /// <summary>
+        /// The board this card is in. <para/>
+        /// Specified at the start of each card's processing, only safe to use after that.
+        /// </summary>
+        public TrelloBoardModel? Board { get; set; }
 
         /// <summary>
         /// the checklists that are in this card
         /// </summary>
         public List<string> IDChecklists { get; set; } = new List<string>();
+
         public List<TrelloAttachmentModel> Attachments { get; set; } =
             new List<TrelloAttachmentModel>();
+
+        /// <summary>
+        /// The path to the main file we wrote the card's description to. Populated after
+        /// processing.
+        /// </summary>
+        public string DescriptionPath { get; set; } = "";
+
+        /// <summary>
+        /// The path to the file we wrote the card's comments to. Populated after
+        /// processing.
+        /// </summary>
+        public string CommentsPath { get; set; } = "";
+
+        /// <summary>
+        /// The path to the file we wrote the card's checklists to. Populated after
+        /// processing.
+        /// </summary>
+        public string ChecklistsPath { get; set; } = "";
 
         // workaround for no Required attribute. Returns true if we have data in fields that should
         // always have data

@@ -99,6 +99,24 @@ namespace GoldenSyrupGames.T2MD
         )]
         public bool SingleFile { get; set; } = false;
 
+        /// <summary>
+        /// Write checklists, comments and attachments to the description file.
+        /// </summary>
+        [Option(
+            "replace-links-destination-boards-to-exclude",
+            HelpText = "Links to cards on board names specified here won't have their links "
+                + "updated to local relative file links.\n"
+                + "Use this when you're migrating but leaving some boards in Trello.\n"
+                + "Specify them as a list of strings. The input format is pretty flexible.\n"
+                + "You can use something like\n"
+                + "    --replace-links-destination-boards-to-exclude \"board 1\" \"board 2\" "
+                + "\"board n\"\n"
+                + "or put commas in-between if you want the arguments to be more coupled for"
+                + "readability in a script."
+        )]
+        public IEnumerable<string> ReplaceLinksDestinationBoardsToExclude { get; set; } =
+            new List<string>();
+
         public static Task PrintUsage(IEnumerable<Error> errors)
         {
             Console.WriteLine(
