@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace GoldenSyrupGames.T2MD.Tests
@@ -258,6 +259,46 @@ namespace GoldenSyrupGames.T2MD.Tests
             string actualOutput = Cli.GetUsableBoardName(board, options);
 
             Assert.AreEqual(expectedOutput, actualOutput);
+        }
+
+        [TestMethod]
+        public void GetTrelloCardUrlsFromText_AllUrlTypes_AllUrlsAreFound()
+        {
+            string input =
+                @"
+                    Document in a card somewhere (https://trello.com/c/aa11BB22/146-animating-in-blender)
+                    complete https://trello.com/c/aa11BB22
+                    complete https://trello.com/c/aa11BB22  
+                    complete https://trello.com/c/Aa11BB22.
+                    https://trello.com/c/aa11BB22
+                    https://trello.com/c/aa11BB22/
+                    complete https://trello.com/c/aa11BB22/
+                    https://trello.com/c/aa11BB22/146-animating-in-blender/
+                    https://trello.com/c/aa11BB22/146-animating-in-blender/. This sentence continues.
+                    https://trello.com/c/aa11BB22/7-test-card-%E2%9D%A4-%F0%9F%92%A4
+                    https://trello.com/c/aa11BB22/7-test-card-%E2%9D%A4-%F0%9F%92%A4-%E2%9A%A1
+                    https://trello.com/c/aa11BB22/7-test-card-%E2%9D%A4-%F0%9F%92%A4-%E2%9A%A1-%F0%9F%9A%AB
+                ";
+
+            var expectedOutput = new List<string>()
+            {
+                "https://trello.com/c/aa11BB22/146-animating-in-blender",
+                "https://trello.com/c/aa11BB22",
+                "https://trello.com/c/aa11BB22",
+                "https://trello.com/c/Aa11BB22",
+                "https://trello.com/c/aa11BB22",
+                "https://trello.com/c/aa11BB22/",
+                "https://trello.com/c/aa11BB22/",
+                "https://trello.com/c/aa11BB22/146-animating-in-blender/",
+                "https://trello.com/c/aa11BB22/146-animating-in-blender/",
+                "https://trello.com/c/aa11BB22/7-test-card-%E2%9D%A4-%F0%9F%92%A4",
+                "https://trello.com/c/aa11BB22/7-test-card-%E2%9D%A4-%F0%9F%92%A4-%E2%9A%A1",
+                "https://trello.com/c/aa11BB22/7-test-card-%E2%9D%A4-%F0%9F%92%A4-%E2%9A%A1-%F0%9F%9A%AB"
+            };
+
+            var actualOutput = Cli.GetTrelloCardUrlsFromText(input).ToList();
+
+            CollectionAssert.AreEquivalent(expectedOutput, actualOutput);
         }
     }
 }

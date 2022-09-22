@@ -166,15 +166,16 @@ namespace GoldenSyrupGames.T2MD
             ;
 
             // list them
-            AnsiConsole.MarkupLine("[blue]Boards to back up:[/]");
+            AnsiConsole.MarkupLine("[magenta]Boards to back up:[/]");
             foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards)
             {
                 AnsiConsole.MarkupLine($"    [blue]{trelloApiBoard.Name}[/]");
             }
 
-            // process each board asynchronously
-            AnsiConsole.MarkupLine("[blue]Processing each board:[/]");
-            var boardTasks = new List<Task>();
+            // process each board asynchronously. The downloading, writing, as much of the process
+            // as possible.
+            AnsiConsole.MarkupLine("[magenta]Processing each board (phase 1):[/]");
+            var boardTasks = new List<Task<TrelloBoardModel>>();
             foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards)
             {
                 // Starting each board with Task.Run is consistently faster than just async/await
@@ -183,6 +184,27 @@ namespace GoldenSyrupGames.T2MD
                 boardTasks.Add(Task.Run(() => ProcessTrelloBoardAsync(trelloApiBoard, options)));
             }
             await Task.WhenAll(boardTasks).ConfigureAwait(false);
+            IEnumerable<TrelloBoardModel> trelloBoards = boardTasks.Select(task => task.Result);
+
+            // replace links to cards with links to their now-on-disk files.
+            AnsiConsole.MarkupLine("[magenta]Replacing links (phase 2):[/]");
+
+            // create an efficient data structure to look up cards from their URL codes
+            Dictionary<string, TrelloCardModel> urlCardMap = trelloBoards
+                .SelectMany(board => board.Cards)
+                .ToDictionary(card => card.ShortUrl);
+
+            var boardReplacementTasks = new List<Task>();
+            foreach (TrelloBoardModel trelloBoard in trelloBoards)
+            {
+                // Starting each board with Task.Run is consistently faster than just async/await
+                // within the board, even though it's I/O bound. Probably because the JSON parsing
+                // is CPU bound and it's doing enough of it per board.
+                boardReplacementTasks.Add(
+                    Task.Run(() => ReplaceLinksBoardAsync(trelloBoard, options, urlCardMap))
+                );
+            }
+            await Task.WhenAll(boardReplacementTasks).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -193,7 +215,7 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="options">The parsed options we received on the commandline from the
         /// user</param>
         /// <returns></returns>
-        private static async Task ProcessTrelloBoardAsync(
+        private static async Task<TrelloBoardModel> ProcessTrelloBoardAsync(
             TrelloApiBoardModel trelloApiBoard,
             CliOptions options
         )
@@ -230,7 +252,7 @@ namespace GoldenSyrupGames.T2MD
             // 1000 actions.
             List<TrelloActionModel> boardComments = await GetBoardCommentsAsync(trelloApiBoard.ID);
 
-            // write the json to file (overwrite).
+            // write the json to file (overwrite):
 
             // without this linux will happily write /'s
             string usableBoardName = GetUsableBoardName(trelloApiBoard, options);
@@ -362,6 +384,7 @@ namespace GoldenSyrupGames.T2MD
             await Task.WhenAll(CardTasks);
 
             AnsiConsole.MarkupLine($"    [green]Finished {trelloApiBoard.Name}[/]");
+            return trelloBoard;
         }
 
         /// <summary>
@@ -583,13 +606,12 @@ namespace GoldenSyrupGames.T2MD
                 usableCardName += $" {duplicateDifferentiator}";
             }
 
-            // save the path and contents of the description and comment files so we can
+            // save the path of the files so we can
             // find/replace URLs in them
-            string descriptionContents,
-                descriptionPath,
-                commentsContents,
-                commentsPath;
-            descriptionContents = descriptionPath = commentsContents = commentsPath = String.Empty;
+            string descriptionPath,
+                commentsPath,
+                checklistsPath;
+            descriptionPath = commentsPath = checklistsPath = String.Empty;
 
             // write the description to a markdown file
             Task<(string, string)> WriteCardDescriptionTask = WriteCardDescriptionAsync(
@@ -635,7 +657,7 @@ namespace GoldenSyrupGames.T2MD
             }
 
             // write the checklists to a file if there are any
-            Task WriteCardChecklistsTask = WriteCardChecklistsAsync(
+            Task<(string, string)> WriteCardChecklistsTask = WriteCardChecklistsAsync(
                 trelloCard,
                 trelloBoard,
                 cardFolderPath,
@@ -647,7 +669,7 @@ namespace GoldenSyrupGames.T2MD
 
             if (options.SingleFile)
             {
-                await WriteCardChecklistsTask;
+                (_, checklistsPath) = await WriteCardChecklistsTask;
             }
 
             // get only this card's comments
@@ -683,6 +705,7 @@ namespace GoldenSyrupGames.T2MD
                 );
                 (_, descriptionPath) = WriteCardDescriptionTask.Result;
                 (_, commentsPath) = WriteCardCommentsTask.Result;
+                (_, checklistsPath) = WriteCardChecklistsTask.Result;
 
                 if (downloadAttachmentsTask != null)
                 {
@@ -700,6 +723,11 @@ namespace GoldenSyrupGames.T2MD
                     commentsPath
                 );
             }
+
+            // record the file paths so we can iterate over and replace links in them later
+            trelloCard.DescriptionPath = descriptionPath;
+            trelloCard.CommentsPath = commentsPath;
+            trelloCard.ChecklistsPath = checklistsPath;
         }
 
         /// <summary>
@@ -792,7 +820,7 @@ namespace GoldenSyrupGames.T2MD
         /// <param name="descriptionFilePath">If options.SingleFile is specified, the checklists
         /// content is instead appended to this file.</param>
         /// <returns></returns>
-        private static async Task WriteCardChecklistsAsync(
+        private static async Task<(string, string)> WriteCardChecklistsAsync(
             TrelloCardModel trelloCard,
             TrelloBoardModel trelloBoard,
             string cardFolderPath,
@@ -853,7 +881,11 @@ namespace GoldenSyrupGames.T2MD
                     outputPath = Path.Join(cardFolderPath, checklistsFilename);
                 }
                 await File.AppendAllTextAsync(outputPath, checklistsContents).ConfigureAwait(false);
+
+                return (checklistsContents, outputPath);
             }
+            // else
+            return ("", "");
         }
 
         /// <summary>
@@ -1318,6 +1350,139 @@ namespace GoldenSyrupGames.T2MD
 
             // else
             return potentialDuplicate.Name.ToLower() + archivedString;
+        }
+
+        /// <summary>
+        /// Replaces links to trello card URLs with relative folder links in all cards on the board.
+        /// </summary>
+        /// <param name="trelloBoard">The board to replace links on. This needs to have card models
+        /// with filled out description (and other if used) file paths. i.e. this function needs to
+        /// be called after the initial population work.</param>
+        /// <param name="options">cli options from the user.</param>
+        /// <param name="urlCardMap">A mapping of card short URLs to card models.</param>
+        private static async Task ReplaceLinksBoardAsync(
+            TrelloBoardModel trelloBoard,
+            CliOptions options,
+            Dictionary<string, TrelloCardModel> urlCardMap
+        )
+        {
+            AnsiConsole.MarkupLine($"    [blue]Starting {trelloBoard.Name}[/]");
+
+            var cardReplacementTasks = new List<Task>();
+            foreach (TrelloCardModel trelloCard in trelloBoard.Cards)
+            {
+                cardReplacementTasks.Add(ReplaceLinksCardAsync(trelloCard, options, urlCardMap));
+            }
+            await Task.WhenAll(cardReplacementTasks);
+
+            AnsiConsole.MarkupLine($"    [green]Finished {trelloBoard.Name}[/]");
+        }
+
+        /// <summary>
+        /// Replaces links to trello card URLs with relative folder links in this card's files.
+        /// </summary>
+        /// <param name="trelloCard">The card to replace links in. This needs to have filled out
+        /// description (and other if used) file paths. i.e. this function needs to be called after
+        /// the initial population work.</param>
+        /// <param name="options">cli options from the user.</param>
+        /// <param name="urlCardMap">A mapping of card short URLs to card models.</param>
+        private static async Task ReplaceLinksCardAsync(
+            TrelloCardModel trelloCard,
+            CliOptions options,
+            Dictionary<string, TrelloCardModel> urlCardMap
+        )
+        {
+            var paths = new string[]
+            {
+                trelloCard.DescriptionPath,
+                trelloCard.CommentsPath,
+                trelloCard.ChecklistsPath
+            };
+            var fileTasks = new List<Task>();
+            foreach (string path in paths)
+            {
+                fileTasks.Add(ReplaceLinksFileAsync(path, options, urlCardMap));
+            }
+            await Task.WhenAll(fileTasks);
+        }
+
+        /// <summary>
+        /// Replaces links to trello card URLs with relative folder links in the contents of the
+        /// file at `path`.
+        /// </summary>
+        /// <param name="path">The path to a card file on disk, potentially with Trello card URLs in
+        /// it.</param>
+        /// <param name="options">cli options from the user.</param>
+        /// <param name="urlCardMap">A mapping of card short URLs to card models.</param>
+        private static async Task ReplaceLinksFileAsync(
+            string path,
+            CliOptions options,
+            Dictionary<string, TrelloCardModel> urlCardMap
+        )
+        {
+            if (path != "")
+            {
+                string content = await File.ReadAllTextAsync(path);
+                IEnumerable<string> foundUrls = GetTrelloCardUrlsFromText(content);
+                foreach (string url in foundUrls)
+                {
+                    // extract the short code in the format the json delivers it in
+                    Match shortUrlMatch = Regex.Match(
+                        url,
+                        @"https:\/\/trello\.com\/c\/[a-zA-Z0-9]+"
+                    );
+                    // all the foundUrls should contain the short URL. If not, something is wrong
+                    if (!shortUrlMatch.Success)
+                    {
+                        throw new Exception(
+                            $"Couldn't extract a short Trello card URL from \"{url}\""
+                        );
+                    }
+                    TrelloCardModel destinationCard = urlCardMap[shortUrlMatch.Value];
+                }
+            }
+        }
+
+        /// <summary>
+        /// Matches trello card URLs in card contents that link to other cards. <para />
+        /// Returns a list of these so they can be looked up and replaced. <para />
+        /// Finds URLs with or without trailing / and titles. E.g <para />
+        /// <c>https://trello.com/c/aa11BB22</c> <para />
+        /// <c>https://trello.com/c/aa11BB22/</c> <para />
+        /// <c>https://trello.com/c/aa11BB22/card-title</c> <para />
+        /// <c>https://trello.com/c/aa11BB22/card-title/</c> <para />
+        /// <c>https://trello.com/c/aa11BB22/card-title-emoji-%E2%9D%A4/</c> <para />
+        /// </summary>
+        /// <param name="input">The string potentially containing the URLs.</param>
+        /// <returns>All the found URLs.</returns>
+        public static IEnumerable<string> GetTrelloCardUrlsFromText(string input)
+        {
+            var regex = new Regex(
+                @"
+                    (?x) # allow splitting the regex over multiple lines
+                         # and using comments.
+                    https:\/\/ # https://
+                    trello\.com # trello.com
+                    \/c # /c
+                    \/[a-zA-Z0-9]+ # shortcode, e.g. /aa11BB22
+                    # at this point we have a minimum valid URL so everything
+                    # else has to be optional.
+                    (
+                      \/ # /. Keep this in here so we don't match a sentence instead
+                         # of the title
+                      ( # however still make the card title optional so we can capture
+                        # just a trailing / (line above) too 
+                        (\w|-|%)+ # capture letters, numbers, hyphens and what emoji
+                                  # look like when copied and pasted from Chrome URLs
+                        \/? # another optional trailing /
+                      )?
+                    )?
+                "
+            );
+
+            MatchCollection results = regex.Matches(input);
+            var test = regex.Replace(input, "_");
+            return results.Select(match => match.Value);
         }
     }
 }
