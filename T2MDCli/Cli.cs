@@ -208,6 +208,47 @@ namespace GoldenSyrupGames.T2MD
                 );
             }
             await Task.WhenAll(boardReplacementTasks).ConfigureAwait(false);
+
+            // if specified, clean up empty folders. Mainly archive and list ones.
+            if (options.RemoveEmptyFolders)
+            {
+                RemoveEmptyFolders(_outputPath);
+            }
+        }
+
+        /// <summary>
+        /// Removes all empty folders (no files) in the tree.
+        /// from https://stackoverflow.com/a/2811746
+        /// </summary>
+        /// <param name="RootFolderPath"></param>
+        private static void RemoveEmptyFolders(string RootFolderPath)
+        {
+            if (string.IsNullOrEmpty(RootFolderPath))
+                throw new ArgumentException(
+                    "Starting directory is a null reference or an empty string",
+                    "RootFolderPath"
+                );
+
+            try
+            {
+                foreach (string path in Directory.EnumerateDirectories(RootFolderPath))
+                {
+                    RemoveEmptyFolders(path);
+                }
+
+                var entries = Directory.EnumerateFileSystemEntries(RootFolderPath);
+
+                if (!entries.Any())
+                {
+                    try
+                    {
+                        Directory.Delete(RootFolderPath);
+                    }
+                    catch (UnauthorizedAccessException) { }
+                    catch (DirectoryNotFoundException) { }
+                }
+            }
+            catch (UnauthorizedAccessException) { }
         }
 
         /// <summary>
