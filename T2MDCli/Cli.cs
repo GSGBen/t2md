@@ -594,6 +594,9 @@ namespace GoldenSyrupGames.T2MD
             string duplicateDifferentiator
         )
         {
+            // record our board to make phase 2 processing easier
+            trelloCard.Board = trelloBoard;
+
             // get a version of the card title with user-limited length that's safe to use for a
             // filename
             string usableCardName = GetUsableCardName(trelloCard, options);
@@ -1453,8 +1456,20 @@ namespace GoldenSyrupGames.T2MD
                         );
                     }
 
-                    // find the local path of the target card
                     TrelloCardModel destinationCard = urlCardMap[shortUrlMatch.Value];
+
+                    // don't change links to excluded boards
+                    if (
+                        destinationCard.Board != null
+                        && options.ReplaceLinksDestinationBoardsToExclude.Contains(
+                            destinationCard.Board.Name
+                        )
+                    )
+                    {
+                        continue;
+                    }
+
+                    // find the local path of the target card
                     string destinationCardPath = destinationCard.DescriptionPath;
 
                     // get the path from the current file to the target.

@@ -172,6 +172,12 @@ namespace GoldenSyrupGames.T2MD
         public string ShortUrl { get; set; } = "";
 
         /// <summary>
+        /// The board this card is in. <para/>
+        /// Specified at the start of each card's processing, only safe to use after that.
+        /// </summary>
+        public TrelloBoardModel? Board { get; set; }
+
+        /// <summary>
         /// the checklists that are in this card
         /// </summary>
         public List<string> IDChecklists { get; set; } = new List<string>();
