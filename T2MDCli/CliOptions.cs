@@ -117,6 +117,17 @@ namespace GoldenSyrupGames.T2MD
         public IEnumerable<string> ReplaceLinksDestinationBoardsToExclude { get; set; } =
             new List<string>();
 
+        /// <summary>
+        /// Remove empty folders.
+        /// </summary>
+        [Option(
+            "remove-empty-folders",
+            Default = false,
+            HelpText = "If specified, folders with no files in them will be removed.\n"
+                + "e.g. empty archive and list folders."
+        )]
+        public bool RemoveEmptyFolders { get; set; } = false;
+
         public static Task PrintUsage(IEnumerable<Error> errors)
         {
             Console.WriteLine(
