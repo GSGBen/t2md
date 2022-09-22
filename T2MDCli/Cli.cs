@@ -152,7 +152,7 @@ namespace GoldenSyrupGames.T2MD
             }
 
             // quick testing
-            trelloApiBoards = trelloApiBoards.Where(board => board.Name == "Test\\Board").ToList();
+            //trelloApiBoards = trelloApiBoards.Where(board => board.Name == "Test\\Board").ToList();
 
             // ensure they all have the required properties (not natively possible with
             // System.Text.Json)
@@ -1426,7 +1426,6 @@ namespace GoldenSyrupGames.T2MD
             string thisCardShortUrl
         )
         {
-            Console.WriteLine(path);
             if (path != "")
             {
                 string content = await File.ReadAllTextAsync(path);
@@ -1466,6 +1465,7 @@ namespace GoldenSyrupGames.T2MD
                         throw new Exception("Path.GetDirectoryName(path) returned null");
                     }
                     string relativePath = Path.GetRelativePath(sourcePath, destinationCardPath);
+                    relativePath = relativePath.Replace(" ", "%20");
                     if (options.AlwaysUseForwardSlashes)
                     {
                         relativePath = relativePath.Replace("\\", "/");
