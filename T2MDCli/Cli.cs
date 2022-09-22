@@ -1457,6 +1457,11 @@ namespace GoldenSyrupGames.T2MD
         /// <returns>All the found URLs.</returns>
         public static IEnumerable<string> GetTrelloCardUrlsFromText(string input)
         {
+            // equivalent of `(?x)`. That works in the online testers but doesn't in code.
+            // without this we were returning 7 matches instead of 12.
+            // a C# gotcha. Found by Retax on the C# Discord.
+            RegexOptions options = RegexOptions.IgnorePatternWhitespace;
+
             var regex = new Regex(
                 @"
                     (?x) # allow splitting the regex over multiple lines
@@ -1475,9 +1480,10 @@ namespace GoldenSyrupGames.T2MD
                         (\w|-|%)+ # capture letters, numbers, hyphens and what emoji
                                   # look like when copied and pasted from Chrome URLs
                         \/? # another optional trailing /
-                      )?
+                        )?
                     )?
-                "
+                ",
+                options
             );
 
             MatchCollection results = regex.Matches(input);
