@@ -9,7 +9,9 @@ This allows you to preserve important info you store in Trello, view it locally,
 
 It runs asynchronously which makes it pretty fast too. Both Windows and Linux single-file-binary (no .Net Core install required) builds are available.
 
-Example layout:
+**NEW:** The latest version (4+) now supports extra features to make exporting to Obsidian even easier. Create a single markdown file per card, disable number prefixes, replace Trello card links with local file links, always use forward slashes, show attachment previews and remove empty folders. See further down for details.
+
+One example layout:
 
 ```
 .
@@ -48,10 +50,22 @@ Example layout:
 
 ## Exporting to Obsidian or other knowledgebase formats
 
-Run `t2md.exe --help` to see options to improve this. Recommended: 
+Run `t2md.exe --help` to see options to improve this. Recommended settings: 
 
 - `--always-use-forward-slashes`
 - `--no-numbering`
+- `--max-card-filename-title-length 100`
+- `--single-file`
+- `--remove-empty-folders`
+
+## Screenshots
+
+<table>
+  <tr>
+    <td><a href="images/2022-09-23-17-16-21.png"><img src="images/2022-09-23-17-16-21.png"></a></td>
+    <td><a href="images/2022-09-23-17-21-41.png"><img src="images/2022-09-23-17-21-41.png"></a></td>
+  </tr>
+</table>
 
 ## Videogames
 
