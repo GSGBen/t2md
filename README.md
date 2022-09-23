@@ -1,7 +1,7 @@
 
 # Trello to Markdown
 
-<p style="text-align: center">
+<p align="center">
   <img src="images/t2md logo.png" width=400>
 </p>
 
