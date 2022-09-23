@@ -1195,21 +1195,20 @@ namespace GoldenSyrupGames.T2MD
                 // update the model so the replacement works
                 attachment.RelativeAttachmentPathSpacesReplaced =
                     relativeAttachmentPathSpacesReplaced;
-                //
+                // not making the image the clickable link because this break's Obsidian's
+                // link-updating. See https://github.com/GSGBen/t2md/issues/36.
+                // the obsidian image size separator is escaped because | is also a table column
+                // separator.
+                // [id](relative-path) | filename | ![name|width](relative-path)
                 // csharpier-ignore-start
                 string tableRow =
-                    $"{attachment.ID} | "
+                    $"[{attachment.ID}]({relativeAttachmentPathSpacesReplaced}) | "
                     + $"{attachment.FileName} | "
-                    // a markdown image within a markdown link so the image is clickable. the
-                    // obsidian image size separator is escaped because | is also a table column
-                    // separator. [![alt-text|width](link)](link)
-                    + $"["
-                        + $"!["
-                            + $"{relativeAttachmentPath}"
-                            + $"\\|{options.ObsidianAttachmentPreviewWidth}"
-                        + $"]"
-                        + $"({relativeAttachmentPathSpacesReplaced})"
-                    + $"]({relativeAttachmentPathSpacesReplaced})";
+                    + $"!["
+                        + $"{attachment.Name}"
+                        + $"\\|{options.ObsidianAttachmentPreviewWidth}"
+                    + $"]"
+                    + $"({relativeAttachmentPathSpacesReplaced})";
                 // csharpier-ignore-end
 
                 return tableRow;
