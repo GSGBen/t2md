@@ -128,6 +128,18 @@ namespace GoldenSyrupGames.T2MD
         )]
         public bool RemoveEmptyFolders { get; set; } = false;
 
+        // The path under which the backups will be stored and the markdown folder structure
+        // created. Will be created if it doesn't exist.
+        [Option(
+            "obsidian-attachment-preview-width",
+            Default = 200,
+            HelpText = "Obsidian supports sizing ![]() image links, other markdown engines should"
+                + "just ignore it.\n"
+                + "This is the width in pixels of attachment image previews in the attachment "
+                + "table."
+        )]
+        public int ObsidianAttachmentPreviewWidth { get; set; } = 0;
+
         public static Task PrintUsage(IEnumerable<Error> errors)
         {
             Console.WriteLine(

@@ -1073,8 +1073,7 @@ namespace GoldenSyrupGames.T2MD
 
                 // start listing all the attachments, their actual names and paths. a
                 // functional but unformatted markdown table for now
-                attachmentListContents +=
-                    $"id | original fileName | relative downloaded path\n" + $"---|---|---\n";
+                attachmentListContents += $"id | original fileName | link\n" + $"---|---|---\n";
 
                 // download all uploaded attachments into that folder
                 var AttachmentDownloadTasks = new List<Task<string>>();
@@ -1088,7 +1087,8 @@ namespace GoldenSyrupGames.T2MD
                             ignoreFailedAttachmentDownloads,
                             alwaysUseForwardSlashes,
                             boardName,
-                            usableCardName
+                            usableCardName,
+                            options
                         )
                     );
                 }
@@ -1139,7 +1139,8 @@ namespace GoldenSyrupGames.T2MD
             bool ignoreFailedAttachmentDownloads,
             bool alwaysUseForwardSlashes,
             string boardName,
-            string cardName
+            string cardName,
+            CliOptions options
         )
         {
             try
@@ -1194,10 +1195,24 @@ namespace GoldenSyrupGames.T2MD
                 // update the model so the replacement works
                 attachment.RelativeAttachmentPathSpacesReplaced =
                     relativeAttachmentPathSpacesReplaced;
-
-                return $"{attachment.ID} | "
+                //
+                // csharpier-ignore-start
+                string tableRow =
+                    $"{attachment.ID} | "
                     + $"{attachment.FileName} | "
-                    + $"[{relativeAttachmentPath}]({relativeAttachmentPathSpacesReplaced})";
+                    // a markdown image within a markdown link so the image is clickable. the
+                    // obsidian image size separator is escaped because | is also a table column
+                    // separator. [![alt-text|width](link)](link)
+                    + $"["
+                        + $"!["
+                            + $"{relativeAttachmentPath}"
+                            + $"\\|{options.ObsidianAttachmentPreviewWidth}"
+                        + $"]"
+                        + $"({relativeAttachmentPathSpacesReplaced})"
+                    + $"]({relativeAttachmentPathSpacesReplaced})";
+                // csharpier-ignore-end
+
+                return tableRow;
             }
             catch (Exception exception)
             {
