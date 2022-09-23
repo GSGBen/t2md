@@ -18,6 +18,7 @@ namespace GoldenSyrupGames.T2MD.Tests
                 FileName = "ShouldFail"
             };
 
+            var options = new CliOptions();
             await Cli.DownloadTrelloCardAttachmentAsync(
                 attachment,
                 "C:\\FakePath",
@@ -25,7 +26,8 @@ namespace GoldenSyrupGames.T2MD.Tests
                 ignoreFailedAttachmentDownloads,
                 false,
                 "Fake Board",
-                "Fake Card"
+                "Fake Card",
+                options
             );
         }
 
