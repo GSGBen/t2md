@@ -1073,7 +1073,7 @@ namespace GoldenSyrupGames.T2MD
 
                 // start listing all the attachments, their actual names and paths. a
                 // functional but unformatted markdown table for now
-                attachmentListContents += $"id | original fileName | link\n" + $"---|---|---\n";
+                attachmentListContents += $"id | original fileName | image\n" + $"---|---|---\n";
 
                 // download all uploaded attachments into that folder
                 var AttachmentDownloadTasks = new List<Task<string>>();
