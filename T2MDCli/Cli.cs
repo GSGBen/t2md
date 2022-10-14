@@ -1511,6 +1511,17 @@ namespace GoldenSyrupGames.T2MD
                         );
                     }
 
+                    // links can be to cards not on our boards, that we won't have downloaded.
+                    // Ignore those
+                    if (!urlCardMap.ContainsKey(shortUrlMatch.Value))
+                    {
+                        AnsiConsole.WriteLine(
+                            $"{shortUrlMatch.Value} not a downloaded card, "
+                                + $"not replacing link in card {thisCardShortUrl}"
+                        );
+                        continue;
+                    }
+
                     TrelloCardModel destinationCard = urlCardMap[shortUrlMatch.Value];
 
                     // don't change links to excluded boards
