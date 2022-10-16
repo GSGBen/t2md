@@ -258,7 +258,8 @@ namespace GoldenSyrupGames.T2MD.Tests
             string expectedOutput = "board title";
 
             var options = new CliOptions();
-            string actualOutput = Cli.GetUsableBoardName(board, options);
+            var duplicateBoardNames = new Dictionary<ITrelloCommon, string>() { { board, "" } };
+            string actualOutput = Cli.GetUsableBoardName(board, options, duplicateBoardNames);
 
             Assert.AreEqual(expectedOutput, actualOutput);
         }

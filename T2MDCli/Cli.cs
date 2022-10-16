@@ -175,6 +175,13 @@ namespace GoldenSyrupGames.T2MD
                 AnsiConsole.MarkupLine($"    [blue]{trelloApiBoard.Name}[/]");
             }
 
+            // deduplicate board names once for all boards. They can then just read their suffix in
+            // their processing task
+            Dictionary<ITrelloCommon, string> duplicateBoardSuffixes = GetDuplicateSuffixes(
+                trelloApiBoards,
+                options
+            );
+
             // process each board asynchronously. The downloading, writing, as much of the process
             // as possible.
             AnsiConsole.MarkupLine("[magenta]Processing each board (phase 1):[/]");
@@ -184,7 +191,12 @@ namespace GoldenSyrupGames.T2MD
                 // Starting each board with Task.Run is consistently faster than just async/await
                 // within the board, even though it's I/O bound. Probably because the JSON parsing
                 // is CPU bound and it's doing enough of it per board.
-                boardTasks.Add(Task.Run(() => ProcessTrelloBoardAsync(trelloApiBoard, options)));
+                boardTasks.Add(
+                    Task.Run(
+                        () =>
+                            ProcessTrelloBoardAsync(trelloApiBoard, options, duplicateBoardSuffixes)
+                    )
+                );
             }
             await Task.WhenAll(boardTasks).ConfigureAwait(false);
             IEnumerable<TrelloBoardModel> trelloBoards = boardTasks.Select(task => task.Result);
@@ -261,7 +273,8 @@ namespace GoldenSyrupGames.T2MD
         /// <returns></returns>
         private static async Task<TrelloBoardModel> ProcessTrelloBoardAsync(
             TrelloApiBoardModel trelloApiBoard,
-            CliOptions options
+            CliOptions options,
+            Dictionary<ITrelloCommon, string> duplicateBoardSuffixes
         )
         {
             AnsiConsole.MarkupLine($"    [blue]Starting {trelloApiBoard.Name}[/]");
@@ -292,8 +305,11 @@ namespace GoldenSyrupGames.T2MD
 
             // write the json to file (overwrite):
 
-            // without this linux will happily write /'s
-            string usableBoardName = GetUsableBoardName(trelloApiBoard, options);
+            string usableBoardName = GetUsableBoardName(
+                trelloApiBoard,
+                options,
+                duplicateBoardSuffixes
+            );
 
             string boardOutputFilePath = Path.Combine(_outputPath, $"{usableBoardName}.json");
             using FileStream fileStream = File.Create(boardOutputFilePath);
@@ -431,14 +447,19 @@ namespace GoldenSyrupGames.T2MD
         /// Trims preceding and trailing whitespace to avoid Windows being unable to use the folder
         /// (and to neaten things up). <para />
         /// Replaces multiple whitespace with a single space (usually from removing emoji). <para />
-        /// If specified in options, emoji are removed here as well.
+        /// If specified in options, emoji are removed here as well. <para />
+        /// Uses the suffix of this board from duplicateBoardSuffixes to deduplicate board names.
         /// </summary>
         public static string GetUsableBoardName(
             TrelloApiBoardModel trelloApiBoard,
-            CliOptions options
+            CliOptions options,
+            Dictionary<ITrelloCommon, string> duplicateBoardSuffixes
         )
         {
-            string usableBoardName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
+            string suffix = duplicateBoardSuffixes[trelloApiBoard];
+            // without this linux will happily write /'s
+            string filesystemSafeName = FileSystem.SanitiseForPath(trelloApiBoard.Name);
+            string usableBoardName = $"{filesystemSafeName} {suffix}";
             if (options.RemoveEmoji)
             {
                 usableBoardName = Emoji.ReplaceEmoji(usableBoardName, "");
@@ -1311,11 +1332,11 @@ namespace GoldenSyrupGames.T2MD
         /// Dict containing each input entry as a key, and a unique incrementing (per duplicate
         /// name, not total) number in a string as their value if they had a duplicate name, or an
         /// empty string if they didn't. <para />
-        /// Cards will be de-duplicated per list.
         /// E.g.<br />
         ///     ["Card 1", "Card 2", "Card 1"]<br />
         /// would return<br />
         ///     {"Card 1": "1", "Card 2"; "", "Card 1": "2"}. <para />
+        /// Cards will be de-duplicated per list.
         /// </summary>
         /// <param name="potentialDuplicates"></param>
         /// <returns></returns>
@@ -1368,7 +1389,7 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
-        /// Generates the card/list name key used in GetDuplicateSuffixes(). <para/>
+        /// Generates the name key used in GetDuplicateSuffixes(). <para/>
         /// Card names are differentiated within each list. <para />
         /// </summary>
         private static string GetDuplicateNameKey(
