@@ -81,4 +81,4 @@ Hey, do you like videogames? If so please check out my game **Grab n' Throw** on
   </a>
 </p>
 
-<p style="text-align: center; font-weight: bold"><a href="https://store.steampowered.com/app/1813590/Grab_n_Throw/?utm_source=github_t2md">See more on Steam</a></p>]
+**<p align="center"><a href="https://store.steampowered.com/app/1813590/Grab_n_Throw/?utm_source=github_t2md">See more on Steam</a></p>**
