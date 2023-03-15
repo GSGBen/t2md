@@ -175,6 +175,12 @@ namespace GoldenSyrupGames.T2MD
                 AnsiConsole.MarkupLine($"    [blue]{trelloApiBoard.Name}[/]");
             }
 
+            if (options.ListBoardsOnly)
+            {
+                Environment.Exit(0);
+                return;
+            }
+
             // deduplicate board names once for all boards. They can then just read their suffix in
             // their processing task
             Dictionary<ITrelloCommon, string> duplicateBoardSuffixes = GetDuplicateSuffixes(

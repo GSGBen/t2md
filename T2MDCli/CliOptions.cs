@@ -34,6 +34,14 @@ namespace GoldenSyrupGames.T2MD
         )]
         public string ConfigFilePath { get; set; } = "";
 
+        [Option(
+            "list-boards-only",
+            Default = false,
+            HelpText = "If specified, will only print the list of Trello boards available for backup."
+                + "No backups will occur."
+        )]
+        public bool ListBoardsOnly { get; set; } = false;
+
         // The path under which the backups will be stored and the markdown folder structure
         // created. Will be created if it doesn't exist.
         [Option(
