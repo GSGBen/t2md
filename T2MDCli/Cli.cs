@@ -166,13 +166,24 @@ namespace GoldenSyrupGames.T2MD
                     );
                 }
             }
-            ;
+
+            var boardsToInclude = options.BoardsToInclude.ToList();
+            var includeAllBoards = !boardsToInclude.Any();
+            var includedBoardsLookup = boardsToInclude
+                .Select(x => x.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x, StringComparer.OrdinalIgnoreCase);
+
+            bool ShouldBackupBoard(string boardName) => includeAllBoards || includedBoardsLookup.ContainsKey(boardName);
 
             // list them
             AnsiConsole.MarkupLine("[magenta]Boards to back up:[/]");
             foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards)
             {
-                AnsiConsole.MarkupLine($"    [blue]{trelloApiBoard.Name}[/]");
+                var message = ShouldBackupBoard(trelloApiBoard.Name)
+                    ? $"    [blue]{trelloApiBoard.Name}[/]"
+                    : $"    [yellow]{trelloApiBoard.Name} (Not Included)[/]";
+                AnsiConsole.MarkupLine(message);
             }
 
             if (options.ListBoardsOnly)
@@ -188,28 +199,14 @@ namespace GoldenSyrupGames.T2MD
                 options
             );
 
-            var includeAllBoards = string.IsNullOrEmpty(options.BoardsToInclude);
-            var boardsToInclude = options.BoardsToInclude
-                .Split(',')
-                .Select(x => x.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(x => x, StringComparer.OrdinalIgnoreCase);
-
-            bool ShouldBackupBoard(string boardName) => includeAllBoards || boardsToInclude!.ContainsKey(boardName);
+            
 
             // process each board asynchronously. The downloading, writing, as much of the process
             // as possible.
             AnsiConsole.MarkupLine("[magenta]Processing each board (phase 1):[/]");
             var boardTasks = new List<Task<TrelloBoardModel>>();
-            foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards)
+            foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards.Where(b => ShouldBackupBoard(b.Name)))
             {
-                var boardName = trelloApiBoard.Name;
-                if (!ShouldBackupBoard(boardName))
-                {
-                    AnsiConsole.MarkupLine($"[yellow]Skipping board {boardName}, because it was not included:[/]");
-                    continue;
-                }
-
                 // Starting each board with Task.Run is consistently faster than just async/await
                 // within the board, even though it's I/O bound. Probably because the JSON parsing
                 // is CPU bound and it's doing enough of it per board.

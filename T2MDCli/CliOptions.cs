@@ -47,9 +47,10 @@ namespace GoldenSyrupGames.T2MD
             Required = false,
             HelpText = "If specified, limits which boards are backed up.\n"
                        + "Board names can be selected from the 'list-boards-only' operation.\n"
-                       + "Board names are comma separated ','"
+                       + "Board names can be separated by spaces and should contain quotes if the name has spaces: "
+                       + "--boards-to-include \"board 1\" \"board 2\""
         )]
-        public string BoardsToInclude { get; set; } = "";
+        public IEnumerable<string> BoardsToInclude { get; set; } = new List<string>();
 
         // The path under which the backups will be stored and the markdown folder structure
         // created. Will be created if it doesn't exist.
