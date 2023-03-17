@@ -125,12 +125,10 @@ namespace GoldenSyrupGames.T2MD
             HelpText = "Links to cards on board names specified here won't have their links "
                 + "updated to local relative file links.\n"
                 + "Use this when you're migrating but leaving some boards in Trello.\n"
-                + "Specify them as a list of strings. The input format is pretty flexible.\n"
-                + "You can use something like\n"
+                + "Board names can be selected from the 'list-boards-only' operation.\n"
+                + "Board names can be separated by spaces and should contain quotes if the name has spaces: "
                 + "    --replace-links-destination-boards-to-exclude \"board 1\" \"board 2\" "
                 + "\"board n\"\n"
-                + "or put commas in-between if you want the arguments to be more coupled for"
-                + "readability in a script."
         )]
         public IEnumerable<string> ReplaceLinksDestinationBoardsToExclude { get; set; } =
             new List<string>();
