@@ -166,13 +166,30 @@ namespace GoldenSyrupGames.T2MD
                     );
                 }
             }
-            ;
+
+            var boardsToInclude = options.BoardsToInclude.ToList();
+            var includeAllBoards = !boardsToInclude.Any();
+            var includedBoardsLookup = boardsToInclude
+                .Select(x => x.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x, StringComparer.OrdinalIgnoreCase);
+
+            bool ShouldBackupBoard(string boardName) => includeAllBoards || includedBoardsLookup.ContainsKey(boardName);
 
             // list them
             AnsiConsole.MarkupLine("[magenta]Boards to back up:[/]");
             foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards)
             {
-                AnsiConsole.MarkupLine($"    [blue]{trelloApiBoard.Name}[/]");
+                var message = ShouldBackupBoard(trelloApiBoard.Name)
+                    ? $"    [blue]{trelloApiBoard.Name}[/]"
+                    : $"    [yellow]{trelloApiBoard.Name} (Not Included)[/]";
+                AnsiConsole.MarkupLine(message);
+            }
+
+            if (options.ListBoardsOnly)
+            {
+                Environment.Exit(0);
+                return;
             }
 
             // deduplicate board names once for all boards. They can then just read their suffix in
@@ -182,11 +199,13 @@ namespace GoldenSyrupGames.T2MD
                 options
             );
 
+            
+
             // process each board asynchronously. The downloading, writing, as much of the process
             // as possible.
             AnsiConsole.MarkupLine("[magenta]Processing each board (phase 1):[/]");
             var boardTasks = new List<Task<TrelloBoardModel>>();
-            foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards)
+            foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards.Where(b => ShouldBackupBoard(b.Name)))
             {
                 // Starting each board with Task.Run is consistently faster than just async/await
                 // within the board, even though it's I/O bound. Probably because the JSON parsing
