@@ -62,6 +62,8 @@ Run `t2md.exe --help` to see options to improve this. Recommended settings:
 - `--single-file`
 - `--remove-empty-folders`
 
+If you'd prefer the header and original URL be stored as front-matter instead, see https://github.com/GSGBen/coffeemd. This, combined with [this plugin](https://github.com/snezhig/obsidian-front-matter-title), allows the full title and emoji to show in the Obsidian navigation panel.
+
 ## Screenshots
 
 <table>
