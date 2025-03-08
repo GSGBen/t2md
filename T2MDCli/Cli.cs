@@ -9,14 +9,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using GoldenSyrupGames.T2MD.Http;
 
 namespace GoldenSyrupGames.T2MD
 {
+
     public class Cli
     {
-        // create the HttpClient we'll use for all our requests. see
-        // https://www.aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
-        private static HttpClient _httpClient = new HttpClient();
+        // create the rate-limited HttpClient we'll use for all our requests
+        // see https://www.aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
+        private static RateLimitedHttpClient _httpClient = new RateLimitedHttpClient(HttpConstants.DefaultRateLimit);
 
         // Trello credentials
         private static string _apiKey = "";
@@ -58,6 +60,14 @@ namespace GoldenSyrupGames.T2MD
         {
             AnsiConsole.MarkupLine($"[cyan]Output path: {options.OutputPath}[/]");
             AnsiConsole.MarkupLine($"[cyan]Config file: {options.ConfigFilePath}[/]");
+
+            // Reinitialize the rate-limited HTTP client with the configured rate limit, if not default
+            if (options.RateLimit != HttpConstants.DefaultRateLimit)
+            {
+                _httpClient.Dispose();
+                _httpClient = new RateLimitedHttpClient(options.RateLimit);
+            }
+            AnsiConsole.MarkupLine($"[cyan]Rate limit: {options.RateLimit} requests per second[/]");
 
             // ensure our output folder exists.
             // use a subfolder of the user-specified path for safety

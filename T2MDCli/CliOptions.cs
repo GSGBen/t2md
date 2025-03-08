@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CommandLine;
+using GoldenSyrupGames.T2MD.Http;
 
 namespace GoldenSyrupGames.T2MD
 {
@@ -155,6 +156,18 @@ namespace GoldenSyrupGames.T2MD
                 + "table."
         )]
         public int ObsidianAttachmentPreviewWidth { get; set; } = 0;
+
+        /// <summary>
+        /// The maximum number of API requests per second to make to Trello.
+        /// </summary>
+        [Option(
+            "rate-limit",
+            Default = HttpConstants.DefaultRateLimit,
+            HelpText = "The maximum number of API requests per second to make to Trello.\n" +
+                "Set to a higher value (maybe up to 30 or so) to improve performance; the " +
+                "default is fairly conservative."
+        )]
+        public int RateLimit { get; set; } = HttpConstants.DefaultRateLimit;
 
         public static Task PrintUsage(IEnumerable<Error> errors)
         {
