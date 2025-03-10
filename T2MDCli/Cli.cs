@@ -13,12 +13,13 @@ using GoldenSyrupGames.T2MD.Http;
 
 namespace GoldenSyrupGames.T2MD
 {
-
     public class Cli
     {
         // create the rate-limited HttpClient we'll use for all our requests
         // see https://www.aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
-        private static RateLimitedHttpClient _httpClient = new RateLimitedHttpClient(HttpConstants.DefaultRateLimit);
+        private static RateLimitedHttpClient _httpClient = new RateLimitedHttpClient(
+            HttpConstants.DefaultRateLimit
+        );
 
         // Trello credentials
         private static string _apiKey = "";
@@ -184,7 +185,8 @@ namespace GoldenSyrupGames.T2MD
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(x => x, StringComparer.OrdinalIgnoreCase);
 
-            bool ShouldBackupBoard(string boardName) => includeAllBoards || includedBoardsLookup.ContainsKey(boardName);
+            bool ShouldBackupBoard(string boardName) =>
+                includeAllBoards || includedBoardsLookup.ContainsKey(boardName);
 
             // list them
             AnsiConsole.MarkupLine("[magenta]Boards to back up:[/]");
@@ -209,13 +211,15 @@ namespace GoldenSyrupGames.T2MD
                 options
             );
 
-            
-
             // process each board asynchronously. The downloading, writing, as much of the process
             // as possible.
             AnsiConsole.MarkupLine("[magenta]Processing each board (phase 1):[/]");
             var boardTasks = new List<Task<TrelloBoardModel>>();
-            foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards.Where(b => ShouldBackupBoard(b.Name)))
+            foreach (
+                TrelloApiBoardModel trelloApiBoard in trelloApiBoards.Where(
+                    b => ShouldBackupBoard(b.Name)
+                )
+            )
             {
                 // Starting each board with Task.Run is consistently faster than just async/await
                 // within the board, even though it's I/O bound. Probably because the JSON parsing
