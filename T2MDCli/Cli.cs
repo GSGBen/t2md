@@ -1,22 +1,25 @@
-﻿using System;
-using CommandLine;
-using Spectre.Console;
-using System.Text.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Net.Http;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using CommandLine;
+using GoldenSyrupGames.T2MD.Http;
+using Spectre.Console;
 
 namespace GoldenSyrupGames.T2MD
 {
     public class Cli
     {
-        // create the HttpClient we'll use for all our requests. see
-        // https://www.aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
-        private static HttpClient _httpClient = new HttpClient();
+        // create the rate-limited HttpClient we'll use for all our requests
+        // see https://www.aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
+        private static RateLimitedHttpClient _httpClient = new RateLimitedHttpClient(
+            HttpConstants.DefaultRateLimit
+        );
 
         // Trello credentials
         private static string _apiKey = "";
@@ -35,7 +38,7 @@ namespace GoldenSyrupGames.T2MD
             // with pos values as strings, e.g. "123.45". Support those
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
             // Trello also (used to?) encode some positions as "bottom". Handle that
-            Converters = { new TrelloDoubleJsonConverter() }
+            Converters = { new TrelloDoubleJsonConverter() },
         };
 
         static async Task Main(string[] args)
@@ -58,6 +61,14 @@ namespace GoldenSyrupGames.T2MD
         {
             AnsiConsole.MarkupLine($"[cyan]Output path: {options.OutputPath}[/]");
             AnsiConsole.MarkupLine($"[cyan]Config file: {options.ConfigFilePath}[/]");
+
+            // Reinitialize the rate-limited HTTP client with the configured rate limit, if not default
+            if (options.RateLimit != HttpConstants.DefaultRateLimit)
+            {
+                _httpClient.Dispose();
+                _httpClient = new RateLimitedHttpClient(options.RateLimit);
+            }
+            AnsiConsole.MarkupLine($"[cyan]Rate limit: {options.RateLimit} requests per second[/]");
 
             // ensure our output folder exists.
             // use a subfolder of the user-specified path for safety
@@ -174,7 +185,8 @@ namespace GoldenSyrupGames.T2MD
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(x => x, StringComparer.OrdinalIgnoreCase);
 
-            bool ShouldBackupBoard(string boardName) => includeAllBoards || includedBoardsLookup.ContainsKey(boardName);
+            bool ShouldBackupBoard(string boardName) =>
+                includeAllBoards || includedBoardsLookup.ContainsKey(boardName);
 
             // list them
             AnsiConsole.MarkupLine("[magenta]Boards to back up:[/]");
@@ -199,13 +211,15 @@ namespace GoldenSyrupGames.T2MD
                 options
             );
 
-            
-
             // process each board asynchronously. The downloading, writing, as much of the process
             // as possible.
             AnsiConsole.MarkupLine("[magenta]Processing each board (phase 1):[/]");
             var boardTasks = new List<Task<TrelloBoardModel>>();
-            foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards.Where(b => ShouldBackupBoard(b.Name)))
+            foreach (
+                TrelloApiBoardModel trelloApiBoard in trelloApiBoards.Where(
+                    b => ShouldBackupBoard(b.Name)
+                )
+            )
             {
                 // Starting each board with Task.Run is consistently faster than just async/await
                 // within the board, even though it's I/O bound. Probably because the JSON parsing
@@ -1493,7 +1507,7 @@ namespace GoldenSyrupGames.T2MD
             {
                 trelloCard.DescriptionPath,
                 trelloCard.CommentsPath,
-                trelloCard.ChecklistsPath
+                trelloCard.ChecklistsPath,
             }.Distinct();
 
             var fileTasks = new List<Task>();
