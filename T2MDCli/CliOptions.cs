@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Code and classes for commandline options the program uses.
  */
 
@@ -47,9 +47,9 @@ namespace GoldenSyrupGames.T2MD
             "boards-to-include",
             Required = false,
             HelpText = "If specified, limits which boards are backed up.\n"
-                       + "Board names can be selected from the 'list-boards-only' operation.\n"
-                       + "Board names can be separated by spaces and should contain quotes if the name has spaces: "
-                       + "--boards-to-include \"board 1\" \"board 2\""
+                + "Board names can be selected from the 'list-boards-only' operation.\n"
+                + "Board names can be separated by spaces and should contain quotes if the name has spaces: "
+                + "--boards-to-include \"board 1\" \"board 2\""
         )]
         public IEnumerable<string> BoardsToInclude { get; set; } = new List<string>();
 
@@ -163,9 +163,9 @@ namespace GoldenSyrupGames.T2MD
         [Option(
             "rate-limit",
             Default = HttpConstants.DefaultRateLimit,
-            HelpText = "The maximum number of API requests per second to make to Trello.\n" +
-                "Set to a higher value (maybe up to 30 or so) to improve performance; the " +
-                "default is fairly conservative."
+            HelpText = "The maximum number of API requests per second to make to Trello.\n"
+                + "Set to a higher value (maybe up to 30 or so) to improve performance; the "
+                + "default is fairly conservative."
         )]
         public int RateLimit { get; set; } = HttpConstants.DefaultRateLimit;
 

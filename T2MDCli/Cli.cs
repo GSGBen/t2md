@@ -1,24 +1,25 @@
-﻿using System;
-using CommandLine;
-using Spectre.Console;
-using System.Text.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Net.Http;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using CommandLine;
 using GoldenSyrupGames.T2MD.Http;
+using Spectre.Console;
 
 namespace GoldenSyrupGames.T2MD
 {
-
     public class Cli
     {
         // create the rate-limited HttpClient we'll use for all our requests
         // see https://www.aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
-        private static RateLimitedHttpClient _httpClient = new RateLimitedHttpClient(HttpConstants.DefaultRateLimit);
+        private static RateLimitedHttpClient _httpClient = new RateLimitedHttpClient(
+            HttpConstants.DefaultRateLimit
+        );
 
         // Trello credentials
         private static string _apiKey = "";
@@ -37,14 +38,14 @@ namespace GoldenSyrupGames.T2MD
             // with pos values as strings, e.g. "123.45". Support those
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
             // Trello also (used to?) encode some positions as "bottom". Handle that
-            Converters = { new TrelloDoubleJsonConverter() }
+            Converters = { new TrelloDoubleJsonConverter() },
         };
 
         static async Task Main(string[] args)
         {
             // get commandline arguments based on CliOptions, otherwise fail and print help.
-            await Parser.Default
-                .ParseArguments<CliOptions>(args)
+            await Parser
+                .Default.ParseArguments<CliOptions>(args)
                 .MapResult(
                     // when we have all valid options
                     RunAsync,
@@ -184,7 +185,8 @@ namespace GoldenSyrupGames.T2MD
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(x => x, StringComparer.OrdinalIgnoreCase);
 
-            bool ShouldBackupBoard(string boardName) => includeAllBoards || includedBoardsLookup.ContainsKey(boardName);
+            bool ShouldBackupBoard(string boardName) =>
+                includeAllBoards || includedBoardsLookup.ContainsKey(boardName);
 
             // list them
             AnsiConsole.MarkupLine("[magenta]Boards to back up:[/]");
@@ -209,13 +211,15 @@ namespace GoldenSyrupGames.T2MD
                 options
             );
 
-            
-
             // process each board asynchronously. The downloading, writing, as much of the process
             // as possible.
             AnsiConsole.MarkupLine("[magenta]Processing each board (phase 1):[/]");
             var boardTasks = new List<Task<TrelloBoardModel>>();
-            foreach (TrelloApiBoardModel trelloApiBoard in trelloApiBoards.Where(b => ShouldBackupBoard(b.Name)))
+            foreach (
+                TrelloApiBoardModel trelloApiBoard in trelloApiBoards.Where(b =>
+                    ShouldBackupBoard(b.Name)
+                )
+            )
             {
                 // Starting each board with Task.Run is consistently faster than just async/await
                 // within the board, even though it's I/O bound. Probably because the JSON parsing
@@ -342,8 +346,8 @@ namespace GoldenSyrupGames.T2MD
 
             string boardOutputFilePath = Path.Combine(_outputPath, $"{usableBoardName}.json");
             using FileStream fileStream = File.Create(boardOutputFilePath);
-            using Stream contentStream = await response.Content
-                .ReadAsStreamAsync()
+            using Stream contentStream = await response
+                .Content.ReadAsStreamAsync()
                 .ConfigureAwait(false);
             await contentStream.CopyToAsync(fileStream).ConfigureAwait(false);
 
@@ -373,8 +377,8 @@ namespace GoldenSyrupGames.T2MD
             }
 
             // sort the lists by their position in the board so we order the same way as the GUI
-            IOrderedEnumerable<TrelloListModel> orderedLists = trelloBoard.Lists.OrderBy(
-                list => list.Pos
+            IOrderedEnumerable<TrelloListModel> orderedLists = trelloBoard.Lists.OrderBy(list =>
+                list.Pos
             );
 
             // differentiate duplicate list names
@@ -406,8 +410,8 @@ namespace GoldenSyrupGames.T2MD
             // - fun fact: Trello doesn't use contiguous ints for their position: they use
             //   large-ranging floats so that card positions can be updated without recalculating
             //   all.
-            IOrderedEnumerable<TrelloCardModel> orderedCards = trelloBoard.Cards.OrderBy(
-                card => card.Pos
+            IOrderedEnumerable<TrelloCardModel> orderedCards = trelloBoard.Cards.OrderBy(card =>
+                card.Pos
             );
 
             // differentiate duplicate cards. Do it per list because lists will become folders,
@@ -421,8 +425,8 @@ namespace GoldenSyrupGames.T2MD
             var CardTasks = new List<Task>();
             foreach (TrelloCardModel trelloCard in orderedCards)
             {
-                TrelloListModel parentList = trelloBoard.Lists
-                    .Where(list => list.ID == trelloCard.IDList)
+                TrelloListModel parentList = trelloBoard
+                    .Lists.Where(list => list.ID == trelloCard.IDList)
                     .First();
 
                 // give the card the right index and path depending on whether it's archived or not.
@@ -1217,8 +1221,8 @@ namespace GoldenSyrupGames.T2MD
                 );
                 // write the attachment to disk
                 using FileStream attachmentFileStream = File.Create(attachmentPath);
-                using Stream attachmentContentStream = await attachmentResponse.Content
-                    .ReadAsStreamAsync()
+                using Stream attachmentContentStream = await attachmentResponse
+                    .Content.ReadAsStreamAsync()
                     .ConfigureAwait(false);
                 await attachmentContentStream
                     .CopyToAsync(attachmentFileStream)
@@ -1503,7 +1507,7 @@ namespace GoldenSyrupGames.T2MD
             {
                 trelloCard.DescriptionPath,
                 trelloCard.CommentsPath,
-                trelloCard.ChecklistsPath
+                trelloCard.ChecklistsPath,
             }.Distinct();
 
             var fileTasks = new List<Task>();
