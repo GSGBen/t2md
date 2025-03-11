@@ -44,8 +44,8 @@ namespace GoldenSyrupGames.T2MD
         static async Task Main(string[] args)
         {
             // get commandline arguments based on CliOptions, otherwise fail and print help.
-            await Parser
-                .Default.ParseArguments<CliOptions>(args)
+            await Parser.Default
+                .ParseArguments<CliOptions>(args)
                 .MapResult(
                     // when we have all valid options
                     RunAsync,
@@ -216,8 +216,8 @@ namespace GoldenSyrupGames.T2MD
             AnsiConsole.MarkupLine("[magenta]Processing each board (phase 1):[/]");
             var boardTasks = new List<Task<TrelloBoardModel>>();
             foreach (
-                TrelloApiBoardModel trelloApiBoard in trelloApiBoards.Where(b =>
-                    ShouldBackupBoard(b.Name)
+                TrelloApiBoardModel trelloApiBoard in trelloApiBoards.Where(
+                    b => ShouldBackupBoard(b.Name)
                 )
             )
             {
@@ -346,8 +346,8 @@ namespace GoldenSyrupGames.T2MD
 
             string boardOutputFilePath = Path.Combine(_outputPath, $"{usableBoardName}.json");
             using FileStream fileStream = File.Create(boardOutputFilePath);
-            using Stream contentStream = await response
-                .Content.ReadAsStreamAsync()
+            using Stream contentStream = await response.Content
+                .ReadAsStreamAsync()
                 .ConfigureAwait(false);
             await contentStream.CopyToAsync(fileStream).ConfigureAwait(false);
 
@@ -377,8 +377,8 @@ namespace GoldenSyrupGames.T2MD
             }
 
             // sort the lists by their position in the board so we order the same way as the GUI
-            IOrderedEnumerable<TrelloListModel> orderedLists = trelloBoard.Lists.OrderBy(list =>
-                list.Pos
+            IOrderedEnumerable<TrelloListModel> orderedLists = trelloBoard.Lists.OrderBy(
+                list => list.Pos
             );
 
             // differentiate duplicate list names
@@ -410,8 +410,8 @@ namespace GoldenSyrupGames.T2MD
             // - fun fact: Trello doesn't use contiguous ints for their position: they use
             //   large-ranging floats so that card positions can be updated without recalculating
             //   all.
-            IOrderedEnumerable<TrelloCardModel> orderedCards = trelloBoard.Cards.OrderBy(card =>
-                card.Pos
+            IOrderedEnumerable<TrelloCardModel> orderedCards = trelloBoard.Cards.OrderBy(
+                card => card.Pos
             );
 
             // differentiate duplicate cards. Do it per list because lists will become folders,
@@ -425,8 +425,8 @@ namespace GoldenSyrupGames.T2MD
             var CardTasks = new List<Task>();
             foreach (TrelloCardModel trelloCard in orderedCards)
             {
-                TrelloListModel parentList = trelloBoard
-                    .Lists.Where(list => list.ID == trelloCard.IDList)
+                TrelloListModel parentList = trelloBoard.Lists
+                    .Where(list => list.ID == trelloCard.IDList)
                     .First();
 
                 // give the card the right index and path depending on whether it's archived or not.
@@ -1221,8 +1221,8 @@ namespace GoldenSyrupGames.T2MD
                 );
                 // write the attachment to disk
                 using FileStream attachmentFileStream = File.Create(attachmentPath);
-                using Stream attachmentContentStream = await attachmentResponse
-                    .Content.ReadAsStreamAsync()
+                using Stream attachmentContentStream = await attachmentResponse.Content
+                    .ReadAsStreamAsync()
                     .ConfigureAwait(false);
                 await attachmentContentStream
                     .CopyToAsync(attachmentFileStream)
