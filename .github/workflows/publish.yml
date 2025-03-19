@@ -113,7 +113,7 @@ jobs:
       publish
     steps:
     # download all created artifacts above (the .zip files)
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
         
     # upload the files to a draft release and show me all the commits that have been
     # added since the last one. I then need to manually write up the body and set the
