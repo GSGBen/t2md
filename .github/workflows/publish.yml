@@ -90,19 +90,19 @@ jobs:
           zip output/t2md-macos-x64.zip output/osx-x64/t2md
       
       - name: upload windows
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: t2md-win-x64.zip
           path: output/t2md-win-x64.zip
       
       - name: upload linux
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: t2md-linux-x64.zip
           path: output/t2md-linux-x64.zip
 
       - name: upload mac
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: t2md-macos-x64.zip
           path: output/t2md-macos-x64.zip
