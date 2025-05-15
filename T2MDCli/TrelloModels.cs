@@ -164,6 +164,11 @@ namespace GoldenSyrupGames.T2MD
         /// archived
         /// </summary>
         public bool Closed { get; set; } = false;
+        
+        /// <summary>
+        /// Date the card was last modified - used for pagination
+        /// </summary>
+        public string DateLastActivity { get; set; } = "";
 
         /// <summary>
         /// Contains a useful short ID. <para />

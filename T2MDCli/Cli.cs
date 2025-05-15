@@ -238,9 +238,19 @@ namespace GoldenSyrupGames.T2MD
             AnsiConsole.MarkupLine("[magenta]Replacing links (phase 2):[/]");
 
             // create an efficient data structure to look up cards from their URL codes
-            Dictionary<string, TrelloCardModel> urlCardMap = trelloBoards
-                .SelectMany(board => board.Cards)
-                .ToDictionary(card => card.ShortUrl);
+            // handle potential duplicates by only adding each unique ShortUrl once
+            var urlCardMap = new Dictionary<string, TrelloCardModel>();
+            foreach (var board in trelloBoards)
+            {
+                foreach (var card in board.Cards)
+                {
+                    // Only add the card if its ShortUrl isn't already in the dictionary
+                    if (!urlCardMap.ContainsKey(card.ShortUrl))
+                    {
+                        urlCardMap.Add(card.ShortUrl, card);
+                    }
+                }
+            }
 
             var boardReplacementTasks = new List<Task>();
             foreach (TrelloBoardModel trelloBoard in trelloBoards)
@@ -297,6 +307,89 @@ namespace GoldenSyrupGames.T2MD
         }
 
         /// <summary>
+        /// Retrieves a board model using the Trello API with pagination support for large boards.
+        /// </summary>
+        /// <param name="trelloApiBoard">Model of the board generated from the API call that enumerates them</param>
+        /// <returns>A complete TrelloBoardModel with all cards</returns>
+        private static async Task<TrelloBoardModel> GetTrelloBoardWithPaginationAsync(
+            TrelloApiBoardModel trelloApiBoard)
+        {
+            // 1. First get basic board info without cards
+            AnsiConsole.MarkupLine($"    [blue]Fetching board information for {trelloApiBoard.Name}[/]");
+            
+            // Use query parameters for authentication, which is what the rest of the app uses
+            var boardUrl = $"https://api.trello.com/1/boards/{trelloApiBoard.ID}?key={_apiKey}&token={_apiToken}" +
+                           $"&fields=name,desc,shortLink,closed,url&lists=all&labels=all&checklists=all&members=all";
+                
+            string boardResponse = await _httpClient.GetStringAsync(boardUrl).ConfigureAwait(false);
+            var board = JsonSerializer.Deserialize<TrelloBoardModel>(boardResponse, _jsonDeserializeOptions);
+            
+            if (board == null)
+            {
+                throw new Exception($"Failed to deserialize board data for {trelloApiBoard.Name}");
+            }
+            
+            // 2. Get cards with pagination
+            var allCards = new List<TrelloCardModel>();
+            bool hasMoreCards = true;
+            DateTime? beforeDate = null;
+            
+            // Progress indicator for large boards
+            AnsiConsole.MarkupLine($"    [blue]Fetching cards for {trelloApiBoard.Name} (this may take a while for large boards)[/]");
+            
+            while (hasMoreCards)
+            {
+                var cardsUrl = $"https://api.trello.com/1/boards/{trelloApiBoard.ID}/cards?key={_apiKey}&token={_apiToken}" +
+                              $"&filter=all&fields=id,name,desc,closed,idList,idBoard,pos,dateLastActivity,shortUrl,shortLink," +
+                              $"subscribed,url,badges,checkItemStates,idLabels,idChecklists,idMembers,idAttachmentCover," +
+                              $"labels,attachments&attachments=true&attachment_fields=all" +
+                              $"&members=true&member_fields=fullName,username&limit=1000";
+                
+                // Add 'before' parameter for pagination if we have a value
+                if (beforeDate != null)
+                {
+                    // Format as ISO 8601
+                    string formattedDate = beforeDate.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+                    cardsUrl += $"&before={formattedDate}";
+                }
+                
+                string cardsResponse = await _httpClient.GetStringAsync(cardsUrl).ConfigureAwait(false);
+                var cards = JsonSerializer.Deserialize<List<TrelloCardModel>>(cardsResponse, _jsonDeserializeOptions);
+                
+                if (cards == null || cards.Count == 0)
+                {
+                    hasMoreCards = false;
+                }
+                else
+                {
+                    allCards.AddRange(cards);
+                    
+                    // Find the oldest card in this batch for pagination
+                    var oldestCard = cards.OrderBy(c => c.DateLastActivity).FirstOrDefault();
+                    if (oldestCard != null && !string.IsNullOrEmpty(oldestCard.DateLastActivity))
+                    {
+                        beforeDate = DateTime.Parse(oldestCard.DateLastActivity);
+                    }
+                    
+                    AnsiConsole.MarkupLine($"    [blue]Retrieved {allCards.Count} cards so far...[/]");
+                    
+                    // If we got fewer than 1000 cards, we've reached the end
+                    if (cards.Count < 1000)
+                    {
+                        hasMoreCards = false;
+                    }
+                }
+            }
+            
+            // Assign the fetched cards to the board model
+            board.Cards = allCards;
+            
+            AnsiConsole.MarkupLine($"    [green]Successfully retrieved {allCards.Count} cards for {trelloApiBoard.Name}[/]");
+            
+            return board;
+        }
+
+        /// <summary>
         /// The per-board code.
         /// </summary>
         /// <param name="trelloApiBoard">Model of the board generated from the API call that
@@ -312,68 +405,38 @@ namespace GoldenSyrupGames.T2MD
         {
             AnsiConsole.MarkupLine($"    [blue]Starting {trelloApiBoard.Name}[/]");
 
-            // - retrieve the full backup of each, the same as "Menu > more > print and export >
-            //   JSON" in the web UI.
-            // - the backup URL is just the board with .json: https://trello.com/b/<boardID>.json
-            // - this grabs everything without having to specify everything we want via the API,
-            //   which may change on us in the future.
-            // - also as a quick check the (formatted) output of this has more lines than the output
-            //   of trello-backup.php for the same board.
-            var backupUrl = $"https://trello.com/b/{trelloApiBoard.ShortLink}.json";
-            using var request = new HttpRequestMessage(HttpMethod.Get, backupUrl);
-            // don't auth with parameters, authorize with the weird header like the S3 requests:
-            //     Authorization: OAuth oauth_consumer_key="<api key>", oauth_token="<api token>"
-            request.Headers.Add(
-                "Authorization",
-                $"OAuth oauth_consumer_key=\"{_apiKey}\", oauth_token=\"{_apiToken}\""
-            );
-            using HttpResponseMessage response = await _httpClient
-                .SendAsync(request)
-                .ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            // Use pagination method to get all the cards in the board
+            var trelloBoard = await GetTrelloBoardWithPaginationAsync(trelloApiBoard);
 
-            // get all board comments from the API because the json export only contains the last
-            // 1000 actions.
+            // Get all board comments from the API because they're not included in the paginated cards fetch
             List<TrelloActionModel> boardComments = await GetBoardCommentsAsync(trelloApiBoard.ID);
 
-            // write the json to file (overwrite):
-
+            // Get the properly formatted board name
             string usableBoardName = GetUsableBoardName(
                 trelloApiBoard,
                 options,
                 duplicateBoardSuffixes
             );
 
+            // Write the board data to a JSON file
             string boardOutputFilePath = Path.Combine(_outputPath, $"{usableBoardName}.json");
-            using FileStream fileStream = File.Create(boardOutputFilePath);
-            using Stream contentStream = await response.Content
-                .ReadAsStreamAsync()
-                .ConfigureAwait(false);
-            await contentStream.CopyToAsync(fileStream).ConfigureAwait(false);
+            await File.WriteAllTextAsync(
+                boardOutputFilePath, 
+                JsonSerializer.Serialize(trelloBoard, new JsonSerializerOptions { WriteIndented = true })
+            );
 
-            // create a folder for each board
+            // Create a folder for each board
             string boardPath = Path.Combine(_outputPath, usableBoardName);
             Directory.CreateDirectory(boardPath);
-            // do the same for a subfolder for archived lists
+            
+            // Create a subfolder for archived lists
             string archivedListPath = Path.Combine(boardPath, "archived");
             Directory.CreateDirectory(archivedListPath);
 
-            // parse the board's json. first reset the stream as we read it above
-            contentStream.Position = 0;
-            using var boardJsonStreamReader = new StreamReader(contentStream);
-            var trelloBoard = JsonSerializer.Deserialize<TrelloBoardModel>(
-                await boardJsonStreamReader.ReadToEndAsync().ConfigureAwait(false),
-                _jsonDeserializeOptions
-            );
-            if (trelloBoard == null)
-            {
-                throw new Exception($"Failed to parse {boardOutputFilePath}");
-            }
-
-            // ensure we have required properties
+            // Ensure we have required properties
             if (!trelloBoard.AreAllRequiredFieldsFilled())
             {
-                throw new Exception($"{boardOutputFilePath} missing required properties.");
+                throw new Exception($"Board data missing required properties for {trelloApiBoard.Name}.");
             }
 
             // sort the lists by their position in the board so we order the same way as the GUI
@@ -413,6 +476,36 @@ namespace GoldenSyrupGames.T2MD
             IOrderedEnumerable<TrelloCardModel> orderedCards = trelloBoard.Cards.OrderBy(
                 card => card.Pos
             );
+            
+            // Create a special list for orphaned cards (cards with no valid parent list)
+            // Always create this list to handle any orphaned cards that might exist
+            var orphanedCardsList = new TrelloListModel
+            {
+                ID = "orphaned-cards-list",
+                Name = "Orphaned Cards",
+                Closed = false,
+                Pos = 999999 // Position at the end
+            };
+            
+            // Create folders for the orphaned cards list
+            string orphanedListPath = Path.Combine(boardPath, "Orphaned Cards");
+            Directory.CreateDirectory(orphanedListPath);
+            orphanedCardsList.FolderPath = orphanedListPath;
+            
+            string orphanedArchivedPath = Path.Combine(orphanedListPath, "archived");
+            Directory.CreateDirectory(orphanedArchivedPath);
+            orphanedCardsList.ArchiveFolderPath = orphanedArchivedPath;
+            
+            // Check if there are any orphaned cards
+            bool hasOrphanedCards = orderedCards.Any(card => 
+                !trelloBoard.Lists.Any(list => list.ID == card.IDList));
+                
+            if (hasOrphanedCards)
+            {
+                // Add it to the board's lists only if orphaned cards exist
+                trelloBoard.Lists.Add(orphanedCardsList);
+                AnsiConsole.MarkupLine($"    [yellow]Created special list for orphaned cards[/]");
+            }
 
             // differentiate duplicate cards. Do it per list because lists will become folders,
             // cards will become files and that makes the most sense for the user
@@ -425,9 +518,10 @@ namespace GoldenSyrupGames.T2MD
             var CardTasks = new List<Task>();
             foreach (TrelloCardModel trelloCard in orderedCards)
             {
+                // Try to find the parent list, use the orphaned list if not found
                 TrelloListModel parentList = trelloBoard.Lists
                     .Where(list => list.ID == trelloCard.IDList)
-                    .First();
+                    .FirstOrDefault() ?? orphanedCardsList;
 
                 // give the card the right index and path depending on whether it's archived or not.
                 // outside the function because they're all running in parallel and would read the
