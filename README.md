@@ -44,7 +44,8 @@ One example layout:
 
 - Run `t2md.exe --help` to see options
 - Run `t2md.exe --output-folder <backup destination folder>` once to generate `t2md.json` in the current directory
-- Browse to https://trello.com/app-key and copy your `Key`
+- Browse to [https://trello.com/app-key](https://trello.com/power-ups/admin/) and and create a new Power Up there. Fill
+  everything besides the `Iframe connector URL` field and then you can create and copy your `Key`.
 - Replace `<key>` with it at the end of the following URL, browse to it and continue to retrieve your token
   - `https://trello.com/1/authorize?name=Trello%20To%20Markdown&expiration=never&scope=read&response_type=token&key=<key>`
 - Put them both in `t2md.json`
